@@ -1,0 +1,2948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mouse AHK</title>
+<style>
+  :root {
+    --primary: #3793ff;
+    --bg: #0f0f0f;
+    --sidebar-bg: #161616;
+    --panel-header-bg: #1a1a1a;
+    --text: #e0e0e0;
+    --text-muted: #888;
+    --border: #2a2a2a;
+    --input-bg: #2d2d2d;
+    --hover: #212121;
+    --row-hover: #1c1c1c;
+    --selected-bg: rgba(55, 147, 255, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .sidebar-logo {
+    padding: 16px 14px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-logo h1 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+  }
+
+  .sidebar-logo small {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+  }
+
+  .sidebar-file-btns {
+    padding: 10px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-section-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 12px 14px 4px;
+  }
+
+  .ctx-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 8px;
+  }
+
+  .ctx-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    gap: 8px;
+    transition: background 0.1s;
+  }
+
+  .ctx-item:hover { background: var(--hover); }
+
+  .ctx-item.active {
+    background: var(--selected-bg);
+    border-left-color: var(--primary);
+  }
+
+  .ctx-item-icon { font-size: 0.85rem; flex-shrink: 0; opacity: 0.65; }
+
+  .ctx-item-body { flex: 1; min-width: 0; }
+
+  .ctx-item-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+
+  .ctx-item.active .ctx-item-name { color: var(--primary); }
+
+  .ctx-item-sub {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+
+  .ctx-item-count {
+    font-size: 0.62rem;
+    background: #252525;
+    color: var(--text-muted);
+    padding: 1px 6px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .ctx-item.active .ctx-item-count {
+    background: rgba(55,147,255,0.2);
+    color: var(--primary);
+  }
+
+  .sidebar-add-btns {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* ── MAIN PANEL ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .main-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-muted);
+  }
+
+  .main-empty-icon { font-size: 2.5rem; opacity: 0.25; }
+  .main-empty h2 { font-size: 1rem; color: #555; font-weight: 500; }
+  .main-empty p { font-size: 0.8rem; }
+
+  #contexts-container {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* context card */
+  .context {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .context.active { display: flex; }
+
+  .ctx-panel-header {
+    padding: 12px 20px;
+    background: var(--panel-header-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .ctx-panel-header-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .tag-container { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .tag {
+    background: rgba(55,147,255,0.1);
+    color: var(--primary);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(55,147,255,0.25);
+  }
+
+  .tag b { cursor: pointer; opacity: 0.6; font-weight: 400; }
+  .tag b:hover { opacity: 1; }
+
+  .tag-global {
+    background: rgba(76,175,80,0.1);
+    color: #5dbf61;
+    border-color: rgba(76,175,80,0.25);
+  }
+
+  .app-add-inline { display: flex; gap: 6px; align-items: center; position: relative; }
+
+  /* ── EXE CUSTOM DROPDOWN ── */
+  .app-input-wrap { position: relative; display: inline-flex; }
+  .app-dropdown { position: absolute; top: calc(100% + 4px); left: 0; min-width: 100%; max-height: 220px;
+    overflow-y: auto; background: #1e1e1e; border: 1px solid var(--border); border-radius: 7px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.55); z-index: 300; display: none; }
+  .app-dropdown.open { display: block; }
+  .app-dd-item { padding: 7px 12px; font-size: 0.82rem; cursor: pointer; color: var(--text); white-space: nowrap; }
+  .app-dd-item:hover, .app-dd-item.focused { background: rgba(55,147,255,0.15); color: var(--primary); }
+
+  /* ── EXE HELP POPOVER ── */
+  .exe-help-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 0.7rem; cursor: pointer; font-family: inherit; line-height: 1; padding: 0; flex-shrink: 0; }
+  .exe-help-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .exe-popover { position: absolute; top: calc(100% + 8px); left: 0; width: 270px; background: #1e1e1e; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.55); font-size: 0.8rem; line-height: 1.55; }
+  .exe-popover-title { font-weight: 700; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-muted); margin-bottom: 8px; }
+  .exe-popover ol { padding-left: 16px; color: var(--text); margin: 0; }
+  .exe-popover ol li { margin-bottom: 4px; }
+  .exe-popover code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 0.76rem; color: var(--primary); }
+
+  /* ── GUIDES MODAL ── */
+  .guides-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 400; display: flex; align-items: center; justify-content: center; }
+  .guides-modal { background: #161616; border: 1px solid var(--border); border-radius: 10px; width: 530px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 16px 48px rgba(0,0,0,0.65); }
+  .guides-modal-hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .guides-modal-hdr h2 { font-size: 0.92rem; font-weight: 700; }
+  .guides-modal-body { overflow-y: auto; padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 22px; }
+  .guides-section { }
+  .guides-section-title { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--primary); margin-bottom: 10px; }
+  .guides-steps ol { padding-left: 18px; color: var(--text); font-size: 0.84rem; line-height: 1.65; margin: 0; }
+  .guides-steps ol li { margin-bottom: 4px; }
+  .guides-steps a { color: var(--primary); text-decoration: none; }
+  .guides-steps a:hover { text-decoration: underline; }
+  .guides-faq { display: flex; flex-direction: column; gap: 6px; }
+  .guides-faq-item { background: #111; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .guides-faq-q { padding: 9px 13px; font-size: 0.82rem; font-weight: 600; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .guides-faq-q:hover { background: #1a1a1a; }
+  .guides-faq-q .faq-chev { color: var(--text-muted); font-size: 0.78rem; transition: transform 0.15s; flex-shrink: 0; }
+  .guides-faq-item.open .faq-chev { transform: rotate(90deg); }
+  .guides-faq-a { display: none; padding: 0 14px 11px; font-size: 0.81rem; color: #aaa; line-height: 1.6; }
+  .guides-faq-item.open .guides-faq-a { display: block; }
+  .guides-faq-a ol { padding-left: 18px; color: var(--text); margin: 6px 0 0; }
+  .guides-faq-a ol li { margin-bottom: 3px; }
+  .guides-faq-a code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 0.78rem; color: var(--primary); }
+
+  /* ── SIDEBAR FOOTER ── */
+  .sidebar-footer { padding: 8px 12px 10px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .sidebar-guide-link { background: none; border: none; color: var(--text-muted); font-size: 0.74rem; cursor: pointer; font-family: inherit; padding: 3px 2px; display: flex; align-items: center; gap: 5px; width: 100%; text-align: left; }
+  .sidebar-guide-link:hover { color: var(--text); }
+
+  /* ── BINDING DEMO ── */
+  .binding-demo { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; user-select: none; }
+  /* mouse-area is the anchor; badge floats above it absolutely so it never shifts layout */
+  .demo-mouse-area { position: relative; display: flex; align-items: center; justify-content: center; }
+  .demo-badge { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(5px); opacity: 0; transition: opacity 0.38s, transform 0.38s; white-space: nowrap; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .demo-badge.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .demo-badge-keys { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+  .demo-key-chip { background: #252525; border: 1px solid #3e3e3e; border-radius: 5px; padding: 3px 9px; font-size: 0.72rem; color: #d0d0d0; font-family: ui-monospace, monospace; white-space: nowrap; }
+  .demo-badge-label { font-size: 0.74rem; color: #555; }
+  /* mouse wrapper — animates for gesture scenes */
+  .demo-mouse-wrap { transition: transform 0.65s cubic-bezier(0.34, 1.12, 0.64, 1); }
+  .demo-mouse-wrap.move-right { transform: translateX(38px) rotate(5deg); }
+  .demo-mouse-wrap.move-left  { transform: translateX(-38px) rotate(-5deg); }
+  /* mouse SVG button layers */
+  .dm-lbtn, .dm-rbtn, .dm-mbtn { fill: transparent; transition: fill 0.28s, filter 0.28s; }
+  .dm-sidebtn { transition: fill 0.28s, filter 0.28s; }
+  .dm-wheel-ind { transition: transform 0.38s cubic-bezier(0.34,1.2,0.64,1), fill 0.28s; }
+  .dm-lbtn.lit  { fill: rgba(55,147,255,.20); filter: drop-shadow(0 0 8px rgba(55,147,255,.6)); }
+  .dm-rbtn.lit  { fill: rgba(55,147,255,.20); filter: drop-shadow(0 0 8px rgba(55,147,255,.6)); }
+  .dm-mbtn.lit  { fill: rgba(55,147,255,.28); filter: drop-shadow(0 0 10px rgba(55,147,255,.7)); }
+  .dm-backbtn.lit { fill: rgba(224,150,60,.5) !important; filter: drop-shadow(0 0 7px rgba(224,150,60,.75)); }
+  .dm-fwdbtn.lit  { fill: rgba(224,150,60,.5) !important; filter: drop-shadow(0 0 7px rgba(224,150,60,.75)); }
+  .dm-wheel-ind.su { transform: translateY(-6px); fill: rgba(55,147,255,.85); }
+  .dm-wheel-ind.sd { transform: translateY(6px);  fill: rgba(55,147,255,.85); }
+  .demo-hint { font-size: 0.71rem; color: #333; letter-spacing: 0.01em; margin-top: 20px; }
+
+  .ctx-panel-header-actions { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+
+  .ctx-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .add-binding-bar {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-header-bg);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  tbody tr:hover > td { background: var(--row-hover); }
+  td { padding: 9px 12px; vertical-align: top; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ── BUTTONS ── */
+  button {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #242424;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.1s;
+    font-size: 0.82rem;
+    font-family: inherit;
+  }
+
+  button:hover { background: #303030; }
+
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+  .btn-primary:hover { background: #5aabff; border-color: #5aabff; }
+  .btn-ghost { background: transparent; border-color: rgba(55,147,255,0.35); color: var(--primary); }
+  .btn-ghost:hover { background: rgba(55,147,255,0.1); }
+  .btn-muted { background: transparent; border-color: var(--border); color: var(--text-muted); }
+  .btn-muted:hover { color: var(--text); background: var(--hover); }
+  .btn-danger { background: transparent; border: none; color: #e05555; padding: 4px 8px; }
+  .btn-danger:hover { background: rgba(224,85,85,0.1); }
+  .btn-icon { padding: 3px 7px; border-radius: 4px; font-size: 0.78rem; }
+  .btn-sm { padding: 3px 9px; font-size: 0.75rem; }
+  .btn-full { width: 100%; text-align: left; padding: 7px 10px; font-size: 0.8rem; border-radius: 6px; }
+
+  /* ── FORM ── */
+  select, input[type=text], input[type=number], input:not([type]) {
+    padding: 4px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-family: inherit;
+  }
+
+  select:focus, input:focus { outline: 1px solid rgba(55,147,255,0.5); outline-offset: 0; }
+
+  .rec-input { width: 72px; font-weight: bold; color: #e07070; text-align: center; }
+
+  /* ── MODIFIER PILLS ── */
+  .mods-wrap { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
+  .mod-none-label {
+    font-size: 0.7rem; color: var(--text-muted); padding: 2px 8px;
+    border: 1px dashed #333; border-radius: 10px; opacity: 0.6; user-select: none;
+  }
+
+  .mod-pill {
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border: 1px solid #333;
+    border-radius: 10px;
+    opacity: 0.5;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    color: var(--text);
+  }
+
+  .mod-pill:hover { opacity: 0.8; background: #252525; }
+
+  .mod-pill.active {
+    opacity: 1;
+    border-color: var(--primary);
+    background: rgba(55,147,255,0.15);
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .mod-pill-custom {
+    border-color: #b06000 !important;
+    background: rgba(255,160,50,0.12) !important;
+    color: #ffa032 !important;
+    opacity: 1 !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mod-pill-remove {
+    opacity: 0.5;
+    font-size: 0.85em;
+    line-height: 1;
+  }
+  .mod-pill-remove:hover { opacity: 1; }
+
+  .mod-pill-add {
+    border-style: dashed;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    opacity: 0.7 !important;
+  }
+  .mod-pill-add:hover { opacity: 1 !important; color: var(--text); }
+  .mod-pill-add.recording { color: #e07070 !important; opacity: 1 !important; border-color: #e07070 !important; }
+
+  /* ── BUILDER ── */
+  .builder-container {
+    background: #111;
+    padding: 7px 8px;
+    border-radius: 6px;
+    margin-top: 5px;
+    border-left: 2px solid var(--primary);
+  }
+
+  .builder-step {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 4px;
+  }
+
+  .builder-step:last-child { margin-bottom: 0; }
+
+  /* ── GESTURE ACCORDION ── */
+  .gesture-list {
+    margin-top: 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .trigger-warn { font-size: 0.72rem; color: #e0a030; margin-top: 5px; white-space: normal; max-width: 160px; line-height: 1.35; }
+  .trigger-error { color: #e05555 !important; }
+  body.warnings-hidden .trigger-warn { display: none !important; }
+
+  /* ── DANGER MODAL ── */
+  .danger-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+  .danger-modal { background: #1a1a1a; border: 1px solid #e05555; border-radius: 12px; padding: 28px 28px 22px; max-width: 400px; width: 90%; box-shadow: 0 16px 48px rgba(0,0,0,0.7); }
+  .danger-modal-icon { font-size: 2rem; margin-bottom: 10px; }
+  .danger-modal-title { font-size: 1rem; font-weight: 600; color: #e07070; margin-bottom: 10px; }
+  .danger-modal-body { font-size: 0.85rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 20px; }
+  .danger-modal-body b { color: var(--text); }
+  .danger-modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-danger-proceed { background: rgba(224,85,85,0.15); border: 1px solid #e05555; color: #e07070; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 0.82rem; font-family: inherit; }
+  .btn-danger-proceed:hover { background: rgba(224,85,85,0.25); }
+
+  /* ── BINDING COLLAPSE ── */
+  .binding-row .btn-danger.btn-icon { font-size: 1.05rem; font-weight: 700; padding: 2px 8px; }
+  .drag-handle { cursor: grab; color: #444; font-size: 0.85rem; padding: 0 5px 0 2px; user-select: none; line-height: 1; flex-shrink: 0; }
+  .drag-handle:hover { color: var(--text-muted); }
+  .binding-row.row-dragging { opacity: 0.35; }
+  .binding-row.drag-over { outline: 2px solid var(--primary); outline-offset: -1px; }
+  /* compact gesture grid shown when collapsed */
+  .gesture-compact { display: none; background: #111; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 6px; }
+  .gesture-compact.visible { display: block; }
+  .gc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .gc-item { padding: 5px 10px; font-size: 0.85rem; font-weight: 400; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: inherit; }
+  .gc-item span.gc-icon { color: var(--text-muted); margin-right: 4px; }
+  .gc-item.gc-set { color: var(--text); }
+  .gc-item.gc-set span.gc-icon { color: var(--text); }
+  .gc-tap { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+
+  /* collapsed shortcut preview */
+  .shortcut-preview { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .shortcut-chip {
+    font-size: 0.72rem; padding: 2px 7px;
+    border: 1px solid var(--primary); border-radius: 4px;
+    background: rgba(55,147,255,0.1); color: var(--primary); font-weight: 600;
+  }
+
+  /* ── CONFLICT DETECTION ── */
+  tr.conflict-row > td { background: rgba(224,85,85,0.07) !important; }
+  tr.conflict-row > td:first-child { border-left: 2px solid #e05555 !important; }
+  .tag.conflict-tag { border-color: #e05555 !important; background: rgba(224,85,85,0.12) !important; color: #e05555 !important; }
+
+  /* ── EXPORT TOAST ── */
+  #export-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px);
+    background: #1e1e1e; border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 18px; display: flex; flex-direction: column; gap: 4px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5); z-index: 9999;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    max-width: 340px; text-align: center;
+  }
+  #export-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  #export-toast b { color: var(--primary); font-size: 13px; }
+  #export-toast span { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+
+  .gesture-row { border-bottom: 1px solid var(--border); }
+  .gesture-row:last-child { border-bottom: none; }
+
+  .gesture-row-hd {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    cursor: pointer;
+    user-select: none;
+    background: #111;
+    transition: background 0.1s;
+  }
+  .gesture-row-hd:hover { background: #171717; }
+  .gesture-row.open > .gesture-row-hd { background: #181820; }
+
+  .gesture-row-icon {
+    font-size: 1.05rem;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .gesture-row-info { flex: 1; min-width: 0; }
+
+  .gesture-row-title {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 1px;
+  }
+
+  .gesture-row-summary {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--text);
+    display: block;
+  }
+
+  .gesture-row.open .gesture-row-summary { color: var(--primary); }
+
+  .gesture-row-chevron {
+    color: #444;
+    font-size: 0.9rem;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .gesture-row.open > .gesture-row-hd .gesture-row-chevron { transform: rotate(90deg); color: var(--primary); }
+
+  .gesture-row-bd {
+    display: none;
+    padding: 10px 12px 12px;
+    background: #0d0d0d;
+    border-top: 1px solid var(--border);
+  }
+  .gesture-row.open > .gesture-row-bd { display: block; }
+
+  /* ── SIDEBAR TABS ── */
+  .sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .sidebar-tab {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    border-radius: 0;
+    margin-bottom: -1px;
+    cursor: pointer;
+    transition: color 0.1s;
+  }
+
+  .sidebar-tab:hover { background: var(--hover); color: var(--text); }
+  .sidebar-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* ── MACRO LIST ── */
+  .macro-list { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+
+  /* ── MACRO EDITOR CONTAINER ── */
+  #macro-editor-container {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .macro-name-input {
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text);
+    padding: 3px 7px;
+    border-radius: 5px;
+    flex: 1;
+    min-width: 160px;
+    font-family: inherit;
+  }
+
+  .macro-name-input:hover { border-color: var(--border); }
+  .macro-name-input:focus { border-color: var(--primary); outline: none; background: var(--input-bg); }
+
+  /* ── MACRO STEPS ── */
+  .macro-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .macro-step:last-child { border-bottom: none; }
+  .macro-step:hover { background: var(--row-hover); }
+
+  .macro-step-num {
+    width: 18px;
+    text-align: right;
+    font-size: 0.68rem;
+    color: #444;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .macro-step-lbl {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .macro-steps-empty {
+    padding: 32px 20px;
+    text-align: center;
+    color: #444;
+    font-size: 0.82rem;
+    line-height: 2;
+  }
+
+  /* ── MACRO STEP TYPE SELECT ── */
+  .macro-step-type { font-size: 0.72rem; padding: 3px 5px; width: 96px; }
+
+  /* ── RECORDING ── */
+  .btn-record { color: var(--text-muted); }
+  .btn-record-stop {
+    background: rgba(224,85,85,0.12) !important;
+    border-color: #e05555 !important;
+    color: #e05555 !important;
+  }
+
+  .recording-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: rgba(224,85,85,0.07);
+    border-bottom: 1px solid rgba(224,85,85,0.18);
+    font-size: 0.78rem;
+    color: #d04444;
+    flex-shrink: 0;
+  }
+
+  .rec-dot {
+    width: 7px; height: 7px;
+    background: #e05555;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: blink 1s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── MACRO REF (in action interface) ── */
+  .macro-ref-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 2px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* ── KEBAB MENU BUTTON ── */
+  .ctx-menu-btn {
+    display: none;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted);
+    padding: 2px 6px !important;
+    border-radius: 4px;
+    font-size: 1rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .ctx-item:hover .ctx-menu-btn,
+  .ctx-item.active .ctx-menu-btn { display: flex; }
+  .ctx-menu-btn:hover { background: rgba(255,255,255,0.1) !important; color: var(--text) !important; }
+
+  /* ── DROPDOWN MENU ── */
+  #ctx-menu {
+    position: fixed;
+    z-index: 9999;
+    background: #1e1e1e;
+    border: 1px solid #383838;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    min-width: 175px;
+    padding: 4px 0;
+    display: none;
+  }
+
+  .ctx-menu-item {
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--text);
+    user-select: none;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+  }
+
+  .ctx-menu-item:hover { background: #2a2a2a; }
+  .ctx-menu-item:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+  .ctx-menu-item.danger { color: #e05555; }
+  .ctx-menu-item.danger:hover { background: rgba(224,85,85,0.1); }
+  .ctx-menu-sep { border-top: 1px solid #2e2e2e; margin: 4px 0; }
+
+  /* ── SETTINGS PANEL ── */
+  .settings-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+  .settings-card {
+    background: var(--hover);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .settings-card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .settings-card-desc {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    margin-bottom: 8px;
+  }
+
+  .settings-row:last-child { margin-bottom: 0; }
+
+  .settings-row-lbl {
+    color: var(--text-muted);
+    min-width: 100px;
+    flex-shrink: 0;
+  }
+
+  .settings-hint {
+    background: #111;
+    border-left: 2px solid var(--primary);
+    border-radius: 0 6px 6px 0;
+    padding: 9px 12px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 10px;
+  }
+
+  .toggle-enabled-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+
+  /* custom toggle switch */
+  .toggle-switch {
+    position: relative; width: 36px; height: 20px; flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0; background: #333; border-radius: 20px;
+    transition: background 0.2s; cursor: pointer;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 14px; height: 14px; left: 3px; top: 3px;
+    background: #888; border-radius: 50%; transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: rgba(55,147,255,0.3); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--primary); }
+
+  /* trigger type pill group */
+  .trigger-type-group { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+  .trigger-type-btn {
+    flex: 1; padding: 5px 10px; font-size: 0.75rem; font-weight: 600;
+    background: transparent; border: none; border-radius: 0; color: var(--text-muted);
+    cursor: pointer; border-right: 1px solid var(--border);
+  }
+  .trigger-type-btn:last-child { border-right: none; }
+  .trigger-type-btn:hover { background: var(--hover); color: var(--text); }
+  .trigger-type-btn.active { background: rgba(55,147,255,0.15); color: var(--primary); }
+
+  /* key recorder for settings */
+  .settings-key-rec { display: flex; align-items: center; gap: 8px; }
+  .settings-key-display {
+    flex: 1; padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--input-bg); color: var(--text); font-size: 0.82rem;
+    font-family: inherit; text-align: center; cursor: pointer; min-width: 100px;
+  }
+  .settings-key-display.recording {
+    border-color: #e05555; color: #e05555; animation: blink 0.8s ease-in-out infinite;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3e3e3e; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Mouse AHK</h1>
+    <small>AutoHotkey v2 configurator</small>
+  </div>
+  <div class="sidebar-file-btns">
+    <button class="btn-primary" style="flex:1" onclick="exportAHK(true)">Export .ahk</button>
+    <button class="btn-muted" style="flex:1" onclick="document.getElementById('fileInput').click()">Load .ahk</button>
+    <button id="btn-export-as" class="btn-muted" style="display:none;flex:1 0 100%" onclick="exportAHK(false)">↑ Update .ahk</button>
+    <input type="file" id="fileInput" hidden accept=".ahk" onchange="handleImport(this)">
+  </div>
+  <div class="sidebar-tabs">
+    <button class="sidebar-tab active" id="tab-contexts" onclick="switchTab('contexts')">Contexts</button>
+    <button class="sidebar-tab" id="tab-macros" onclick="switchTab('macros')">Macros</button>
+    <button class="sidebar-tab" id="tab-settings" onclick="switchTab('settings')">⚙</button>
+  </div>
+  <div class="ctx-list" id="ctx-list"></div>
+  <div class="macro-list" id="macro-list" style="display:none"></div>
+  <div class="sidebar-add-btns" id="ctx-add-btns">
+    <button class="btn-full" onclick="addContext(false)">+ App Context</button>
+    <button class="btn-full btn-muted" onclick="addContext(true)">+ Global Fallback</button>
+  </div>
+  <div class="sidebar-add-btns" id="macro-add-btns" style="display:none">
+    <button class="btn-full" onclick="newMacro()">+ New Macro</button>
+  </div>
+  <div id="settings-add-btns" style="display:none"></div>
+  <div class="sidebar-footer">
+    <button class="sidebar-guide-link" onclick="openGuides()">📖 Guide &amp; FAQ</button>
+  </div>
+</aside>
+
+<main class="main" id="main">
+  <div class="main-empty" id="main-empty">
+    <div class="main-empty-icon">🖱</div>
+    <h2>No context selected</h2>
+    <p>Select a context from the sidebar, or create one.</p>
+  </div>
+  <div id="contexts-container"></div>
+  <div id="macro-editor-container"></div>
+  <div id="settings-container" style="display:none;flex:1;flex-direction:column;overflow:hidden;"></div>
+</main>
+
+<script>
+const CONFIG = {
+  inputs: ["Left", "Right", "Back", "Forward", "Middle", "WheelUp", "WheelDown", "WheelLeft", "WheelRight", "Custom"],
+  modifiers: ["Ctrl", "Alt", "Shift", "Win", "Middle Held", "Back Held", "Forward Held", "Left Held", "Right Held"],
+  actions: ["Passthrough", "No Key", "Shortcut", "Macro"],
+  ahkMap: { "Copy": "^c", "Paste": "^v", "Cut": "^x", "Undo": "^z", "Redo": "^y", "VolUp": "{Volume_Up}", "VolDown": "{Volume_Down}", "Mute": "{Volume_Mute}" },
+  mouseMap: { "Left": "LButton", "Right": "RButton", "Back": "XButton1", "Forward": "XButton2", "Middle": "MButton" },
+  modSymbols: { "Ctrl": "^", "Alt": "!", "Shift": "+", "Win": "#" },
+  keyMap: { "ArrowLeft": "Left", "ArrowRight": "Right", "ArrowUp": "Up", "ArrowDown": "Down", "Control": "Ctrl", "Alt": "Alt", "Shift": "Shift", "Meta": "Win", "OS": "Win", "Escape": "Esc", " ": "Space" },
+  presets: [
+    { group: 'Text', items: [
+      { label: 'Copy',       ahk: 'Send("^c")' },
+      { label: 'Paste',      ahk: 'Send("^v")' },
+      { label: 'Cut',        ahk: 'Send("^x")' },
+      { label: 'Undo',       ahk: 'Send("^z")' },
+      { label: 'Redo',       ahk: 'Send("^y")' },
+      { label: 'Select All', ahk: 'Send("^a")' },
+      { label: 'Page Up',    ahk: 'Send("{PgUp}")' },
+      { label: 'Page Down',  ahk: 'Send("{PgDn}")' },
+      { label: 'Home',       ahk: 'Send("{Home}")' },
+      { label: 'End',        ahk: 'Send("{End}")' },
+    ]},
+    { group: 'Media', items: [
+      { label: 'VolUp',      display: 'Vol Up',   ahk: 'Send("{Volume_Up}")' },
+      { label: 'VolDown',    display: 'Vol Down', ahk: 'Send("{Volume_Down}")' },
+      { label: 'Mute',       ahk: 'Send("{Volume_Mute}")' },
+      { label: 'Play/Pause', ahk: 'Send("{Media_Play_Pause}")' },
+      { label: 'Next Track', ahk: 'Send("{Media_Next}")' },
+      { label: 'Prev Track', ahk: 'Send("{Media_Prev}")' },
+    ]},
+    { group: 'Browser', items: [
+      { label: 'Back',         ahk: 'Send("!{Left}")' },
+      { label: 'Forward',      ahk: 'Send("!{Right}")' },
+      { label: 'New Tab',      ahk: 'Send("^t")' },
+      { label: 'Close Tab',    ahk: 'Send("^w")' },
+      { label: 'Reopen Tab',   ahk: 'Send("^+t")' },
+      { label: 'Tab Left',     ahk: 'Send("^+{Tab}")' },
+      { label: 'Tab Right',    ahk: 'Send("^{Tab}")' },
+      { label: 'Refresh',      ahk: 'Send("{F5}")' },
+      { label: 'Hard Refresh', ahk: 'Send("^{F5}")' },
+      { label: 'New Window',   ahk: 'Send("^n")' },
+      { label: 'Address Bar',  ahk: 'Send("^l")' },
+      { label: 'Find on Page', ahk: 'Send("^f")' },
+    ]},
+    { group: 'Mouse', items: [
+      { label: 'Left Click',   ahk: 'Click()' },
+      { label: 'Right Click',  ahk: 'Click("Right")' },
+      { label: 'Middle Click', ahk: 'Click("Middle")' },
+      { label: 'Double Click', ahk: 'Click(2)' },
+      { label: 'Back Button',  ahk: 'Send("{XButton1}")' },
+      { label: 'Fwd Button',   ahk: 'Send("{XButton2}")' },
+      { label: 'Scroll Up',    ahk: 'Send("{WheelUp}")' },
+      { label: 'Scroll Down',  ahk: 'Send("{WheelDown}")' },
+    ]},
+    { group: 'Navigation', items: [
+      { label: 'Alt+Tab',      ahk: 'Send("!{Tab}")' },
+      { label: 'Task View',    ahk: 'Send("{Blind}#{Tab}")' },
+      { label: 'Prev Desktop', ahk: 'Send("{Blind}^#{Left}")' },
+      { label: 'Next Desktop', ahk: 'Send("{Blind}^#{Right}")' },
+      { label: 'Show Desktop', ahk: 'Send("{Blind}#d")' },
+      { label: 'Lock Screen',  ahk: 'Send("{Blind}#l")' },
+      { label: 'Start Menu',   ahk: 'Send("{LWin}")' },
+    ]},
+  ]
+};
+
+const COMMON_APPS = [
+  'chrome.exe','firefox.exe','msedge.exe','explorer.exe','brave.exe','code.exe',
+  'notepad.exe','notepad++.exe','calc.exe','cmd.exe','powershell.exe',
+  'discord.exe','steam.exe','spotify.exe','obs64.exe','vlc.exe','blender.exe',
+  'Overwatch.exe','csgo.exe','valorant.exe','LeagueClient.exe','RocketLeague.exe',
+  'apex.exe','FortniteClient-Win64-Shipping.exe','dota2.exe',
+  'winword.exe','excel.exe','powerpnt.exe','outlook.exe','teams.exe',
+  'photoshop.exe','illustrator.exe','aftereffects.exe','premierepro.exe',
+  'putty.exe','filezilla.exe','teamviewer.exe','anydesk.exe',
+  'telegram.exe','whatsapp.exe','slack.exe','zoom.exe'
+];
+
+const GESTURE_DIRS = [
+  { dir: 'Left',  icon: '←', label: 'Hold + move left' },
+  { dir: 'Right', icon: '→', label: 'Hold + move right' },
+  { dir: 'Up',    icon: '↑', label: 'Hold + move up' },
+  { dir: 'Down',  icon: '↓', label: 'Hold + move down' },
+  { dir: 'Tap',   icon: '○', label: 'Tap (no movement)', noneLabel: 'Passthrough' },
+];
+
+const GESTURE_SUMMARY = {
+  None: 'Do nothing', 'No Key': 'Block input', Passthrough: 'Pass through',
+  Shortcut: 'Keyboard shortcut', Macro: 'Macro sequence',
+  Copy: 'Copy', Paste: 'Paste', Cut: 'Cut', Undo: 'Undo', Redo: 'Redo',
+  VolUp: 'Volume up', VolDown: 'Volume down', Mute: 'Mute',
+};
+
+const ctxContainer = document.getElementById('contexts-container');
+const ctxList = document.getElementById('ctx-list');
+const mainEmpty = document.getElementById('main-empty');
+let selectedIdx = -1;
+let macroLibrary = [];
+let selectedMacroId = null;
+let activeSidebarTab = 'contexts';
+let isRecording = false;
+let recordLastTime = 0;
+let recordStepsEl = null;
+let toggleSettings = { enabled: false, type: 'key', key: 'F9', button: 'Middle', count: 5 };
+let conflictsEnabled = true;
+let safeMode = true;
+let _ahkFileHandle = null;
+let _dragRow = null;
+
+/* ── KEY RECORDER ── */
+function createRecorder(val = "") {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:inline-flex;gap:4px;align-items:center;';
+  const i = document.createElement('input');
+  i.className = 'rec-input'; i.value = val; i.oninput = save;
+  i.title = "Psst! You can type anything from the AHK keylist here (even controller inputs)";
+  const btnRec = document.createElement('button');
+  btnRec.className = 'btn-icon'; btnRec.title = 'Click then press a key';
+  btnRec.textContent = "⏺";
+  btnRec.onclick = () => {
+    i.value = "…"; btnRec.style.color = '#e07070';
+    const handler = (e) => {
+      e.preventDefault();
+      i.value = CONFIG.keyMap[e.key] || e.key;
+      btnRec.style.color = '';
+      window.removeEventListener('keydown', handler);
+      save();
+    };
+    window.addEventListener('keydown', handler);
+  };
+  wrap.append(i, btnRec);
+  return { wrap, input: i };
+}
+
+/* ── MODIFIER PILLS ── */
+function createModifierUI(savedMods = []) {
+  const wrap = document.createElement('div'); wrap.className = 'mods-wrap';
+
+  // Standard toggleable pills
+  CONFIG.modifiers.forEach(m => {
+    const b = document.createElement('button');
+    b.className = "mod-pill" + (savedMods.includes(m) ? " active" : "");
+    b.textContent = m;
+    b.onclick = () => { b.classList.toggle('active'); save(); };
+    wrap.appendChild(b);
+  });
+
+  // Restore any saved custom mod pills
+  savedMods.filter(m => !CONFIG.modifiers.includes(m)).forEach(m => {
+    wrap.appendChild(makeCustomPill(m, wrap));
+  });
+
+  // + Custom record button
+  const addBtn = document.createElement('button');
+  addBtn.className = 'mod-pill mod-pill-add';
+  addBtn.textContent = '+ Custom';
+  addBtn.onclick = () => {
+    addBtn.textContent = 'press key…';
+    addBtn.classList.add('recording');
+    const handler = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const key = CONFIG.keyMap[e.key] || e.key;
+      addBtn.textContent = '+ Custom';
+      addBtn.classList.remove('recording');
+      window.removeEventListener('keydown', handler, true);
+      if (key && key !== 'Unidentified' && !CONFIG.modifiers.includes(key)) {
+        wrap.insertBefore(makeCustomPill(key, wrap), addBtn);
+        save();
+      }
+    };
+    window.addEventListener('keydown', handler, true);
+  };
+  wrap.appendChild(addBtn);
+
+  return wrap;
+}
+
+function makeCustomPill(key, wrap) {
+  const b = document.createElement('button');
+  b.className = 'mod-pill mod-pill-custom';
+  b.dataset.customMod = key;
+  b.onclick = () => {};
+  const label = document.createTextNode(key);
+  const x = document.createElement('span'); x.className = 'mod-pill-remove'; x.textContent = '×';
+  x.onclick = (e) => { e.stopPropagation(); b.remove(); save(); };
+  b.append(label, x);
+  return b;
+}
+
+/* ── ACTION INTERFACE ── */
+function createActionTypeSelect(currentValue) {
+  const sel = document.createElement('select');
+  CONFIG.actions.forEach(o => {
+    const op = new Option(o, o);
+    if (o === currentValue) op.selected = true;
+    sel.add(op);
+  });
+  // Static preset optgroups
+  CONFIG.presets.forEach(({ group, items }) => {
+    const grp = document.createElement('optgroup'); grp.label = group;
+    items.forEach(({ label, display }) => {
+      const op = new Option(display || label, label);
+      if (label === currentValue) op.selected = true;
+      grp.appendChild(op);
+    });
+    sel.appendChild(grp);
+  });
+  // Dynamic saved-macro optgroup (refreshed on focus)
+  const refreshMacroGroup = () => {
+    const existing = sel.querySelector('optgroup[label="Saved Macros"]');
+    if (existing) existing.remove();
+    if (macroLibrary.length > 0) {
+      const grp = document.createElement('optgroup'); grp.label = 'Saved Macros';
+      macroLibrary.forEach(m => {
+        const op = new Option(m.name, m.name);
+        if (m.name === sel.value) op.selected = true;
+        grp.appendChild(op);
+      });
+      sel.appendChild(grp);
+    }
+  };
+  refreshMacroGroup();
+  sel.addEventListener('focus', refreshMacroGroup);
+  return sel;
+}
+
+function createActionInterface(data = null) {
+  const mainWrap = document.createElement('div');
+  const typeSel = createActionTypeSelect(data?.type || "Passthrough");
+  const uiBox = document.createElement('div');
+  const SHORTCUT_MODS = ['Ctrl', 'Alt', 'Shift', 'Win'];
+  const renderUI = () => {
+    uiBox.innerHTML = "";
+    if (typeSel.value === "Shortcut") {
+      const bWrap = document.createElement('div'); bWrap.className = 'builder-container';
+      // Modifier pills
+      const modRow = document.createElement('div'); modRow.className = 'mods-wrap'; modRow.style.marginBottom = '6px';
+      const savedSteps = data?.type === 'Shortcut' ? (data?.steps || []) : [];
+      const activeMods = new Set(savedSteps.filter(s => SHORTCUT_MODS.includes(s.key)).map(s => s.key));
+      SHORTCUT_MODS.forEach(mod => {
+        const pill = document.createElement('button');
+        pill.className = 'mod-pill' + (activeMods.has(mod) ? ' active' : '');
+        pill.dataset.mod = mod; pill.textContent = mod;
+        pill.onclick = () => { pill.classList.toggle('active'); save(); };
+        modRow.appendChild(pill);
+      });
+      // Single key recorder
+      const keyStep = savedSteps.find(s => !SHORTCUT_MODS.includes(s.key));
+      const rec = createRecorder(keyStep?.key || '');
+      bWrap.append(modRow, rec.wrap); uiBox.appendChild(bWrap);
+    } else if (typeSel.value === "Macro") {
+      const info = document.createElement('div'); info.className = 'macro-ref-info';
+      info.style.cssText = 'flex-direction:column;align-items:flex-start;gap:6px;';
+      const msg = document.createElement('span');
+      msg.style.cssText = 'font-size:0.78rem;color:var(--text-muted)';
+      msg.textContent = 'Build reusable macros in the Macros tab, then select them from the dropdown above.';
+      const link = document.createElement('button'); link.className = 'btn-ghost btn-sm'; link.textContent = '→ Open Macros Tab';
+      link.onclick = () => switchTab('macros');
+      info.append(msg, link); uiBox.appendChild(info);
+    } else if (macroLibrary.some(m => m.name === typeSel.value)) {
+      const info = document.createElement('div'); info.className = 'macro-ref-info';
+      const m = macroLibrary.find(x => x.name === typeSel.value);
+      const stepCount = m?.steps.length ?? 0;
+      info.appendChild(document.createTextNode(`${stepCount} step${stepCount !== 1 ? 's' : ''}. `));
+      const link = document.createElement('button'); link.className = 'btn-ghost btn-sm'; link.textContent = 'Edit in Macros tab';
+      link.onclick = () => { switchTab('macros'); if (m) openMacroEditor(m.id); };
+      info.appendChild(link); uiBox.appendChild(info);
+    }
+  };
+  typeSel.onchange = () => { renderUI(); save(); };
+  mainWrap.append(typeSel, uiBox); renderUI(); return mainWrap;
+}
+
+/* ── ADD CONTEXT ── */
+function addContext(isGlobal, data = null, silent = false) {
+  const ctx = document.createElement('div'); ctx.className = 'context';
+  ctx.dataset.global = !!isGlobal;
+  ctx.dataset.label = data?.label || "";
+
+  /* Header */
+  const header = document.createElement('div'); header.className = 'ctx-panel-header';
+
+  const label = document.createElement('span'); label.className = 'ctx-panel-header-label';
+  label.textContent = isGlobal ? 'Scope' : 'Apps';
+  header.appendChild(label);
+
+  const tBox = document.createElement('div'); tBox.className = 'tag-container';
+  header.appendChild(tBox);
+
+  if (!isGlobal) {
+    const addRow = document.createElement('div'); addRow.className = 'app-add-inline';
+
+    // Input wrapped for dropdown positioning
+    const inpWrap = document.createElement('div'); inpWrap.className = 'app-input-wrap';
+    const inp = document.createElement('input');
+    inp.placeholder = "exe name (e.g. chrome.exe)";
+    inp.style.minWidth = '200px';
+
+    // Custom suggestions dropdown
+    const dd = document.createElement('div'); dd.className = 'app-dropdown';
+    let _ddFocus = -1;
+    const _ddItems = () => [...dd.querySelectorAll('.app-dd-item')];
+    const _ddClose = () => { dd.classList.remove('open'); _ddFocus = -1; };
+    const _ddOpen = (q) => {
+      dd.innerHTML = '';
+      const matches = COMMON_APPS.filter(a => a.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
+      if (!matches.length) { _ddClose(); return; }
+      matches.forEach(a => {
+        const item = document.createElement('div'); item.className = 'app-dd-item'; item.textContent = a;
+        item.onmousedown = (e) => { e.preventDefault(); inp.value = a; _ddClose(); };
+        dd.appendChild(item);
+      });
+      dd.classList.add('open'); _ddFocus = -1;
+    };
+    inp.addEventListener('input', () => { const q = inp.value.trim(); q ? _ddOpen(q) : _ddClose(); });
+    inp.addEventListener('focus', () => { const q = inp.value.trim(); if (q) _ddOpen(q); });
+    inp.addEventListener('blur', () => setTimeout(_ddClose, 150));
+    inp.addEventListener('keydown', (e) => {
+      const items = _ddItems();
+      if (e.key === 'ArrowDown') { e.preventDefault(); _ddFocus = Math.min(_ddFocus + 1, items.length - 1); items.forEach((el, i) => el.classList.toggle('focused', i === _ddFocus)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); _ddFocus = Math.max(_ddFocus - 1, 0); items.forEach((el, i) => el.classList.toggle('focused', i === _ddFocus)); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (_ddFocus >= 0 && items[_ddFocus]) { inp.value = items[_ddFocus].textContent; _ddClose(); } else { addApp(); } }
+      else if (e.key === 'Escape') _ddClose();
+    });
+    inpWrap.append(inp, dd);
+    addRow.appendChild(inpWrap);
+    const addBtn = document.createElement('button'); addBtn.className = 'btn-sm'; addBtn.textContent = "Add";
+    addBtn.onclick = addApp;
+
+    // ? help button for finding .exe names
+    const helpBtn = document.createElement('button'); helpBtn.className = 'exe-help-btn'; helpBtn.textContent = '?'; helpBtn.type = 'button';
+    helpBtn.title = 'How to find an app\'s .exe name';
+    let _popoverEl = null;
+    helpBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (_popoverEl) { _popoverEl.remove(); _popoverEl = null; return; }
+      _popoverEl = document.createElement('div'); _popoverEl.className = 'exe-popover';
+      _popoverEl.innerHTML = `<div class="exe-popover-title">How to find an app's .exe name</div><ol><li>Make sure the app is <strong>open and running</strong></li><li>Press <code>Ctrl+Shift+Esc</code> to open Task Manager</li><li>Click the <strong>Details</strong> tab</li><li>Find the app in the list — the <strong>Name</strong> column is the .exe filename</li><li>Type that name here (letter case doesn't matter)</li></ol>`;
+      addRow.appendChild(_popoverEl);
+      const dismiss = (ev) => { if (!_popoverEl?.contains(ev.target) && ev.target !== helpBtn) { _popoverEl?.remove(); _popoverEl = null; document.removeEventListener('click', dismiss); } };
+      setTimeout(() => document.addEventListener('click', dismiss), 0);
+    };
+
+    addRow.append(addBtn, helpBtn);
+    header.appendChild(addRow);
+
+    function addApp() {
+      const n = inp.value.trim();
+      if (!n) return;
+      renderTag(n, tBox); inp.value = "";
+    }
+  } else {
+    tBox.innerHTML = `<span class="tag tag-global">Global Fallback — applies when no app context matches</span>`;
+  }
+
+  /* Body */
+  const body = document.createElement('div'); body.className = 'ctx-panel-body';
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr>
+    <th style="width:155px">Trigger</th>
+    <th style="width:242px">Modifiers</th>
+    <th style="width:75px">Gesture</th>
+    <th>Action</th>
+    <th style="width:40px"></th>
+  </tr></thead><tbody></tbody>`;
+  body.appendChild(tbl);
+
+  const addRowBar = document.createElement('div'); addRowBar.className = 'add-binding-bar';
+  const addRowBtn = document.createElement('button'); addRowBtn.className = 'btn-ghost';
+  addRowBtn.textContent = '+ Add Binding';
+  addRowBtn.onclick = () => addRow(tbl.querySelector('tbody'));
+  addRowBar.appendChild(addRowBtn);
+  body.appendChild(addRowBar);
+  body.appendChild(createBindingDemo());
+
+  ctx.append(header, body);
+  ctxContainer.appendChild(ctx);
+
+  if (data) {
+    if (data.progs?.length) data.progs.forEach(p => renderTag(p, tBox));
+    data.rows?.forEach(r => addRow(tbl.querySelector('tbody'), r));
+  }
+
+  if (!silent) {
+    const newIdx = [...ctxContainer.children].indexOf(ctx);
+    renderSidebar();
+    selectContext(newIdx);
+  }
+  save();
+}
+
+/* ── ADD ROW ── */
+function addRow(tbody, data = null) {
+  const tr = document.createElement('tr');
+  tr.className = 'binding-row open';
+
+  const recIn = createRecorder(data?.customIn || "");
+  const inputs = safeMode ? CONFIG.inputs.filter(i => i !== 'Left' && i !== 'Right') : CONFIG.inputs;
+  const selIn = createSelect(inputs, data?.input);
+  recIn.wrap.style.display = data?.input === "Custom" ? "inline-flex" : "none";
+
+  const modUI = createModifierUI(data?.mods || []);
+
+  const TRIGGER_TO_HELD = { Left: 'Left Held', Right: 'Right Held', Middle: 'Middle Held', Back: 'Back Held', Forward: 'Forward Held' };
+
+  const triggerWarn = document.createElement('div');
+  triggerWarn.className = 'trigger-warn';
+  triggerWarn.textContent = '⚠ Recommended: add a modifier to avoid blocking normal clicks.';
+
+  const triggerError = document.createElement('div');
+  triggerError.className = 'trigger-warn trigger-error';
+  triggerError.textContent = '✕ Trigger and modifier are the same button — this binding won\'t work.';
+
+  const _updateTriggerWarn = () => {
+    const pills = [...modUI.querySelectorAll('.mod-pill')];
+    const activeMods = pills.filter(p => p.classList.contains('active') || p.dataset.customMod);
+    const hasMod = activeMods.length > 0;
+    const isLR = selIn.value === 'Left' || selIn.value === 'Right';
+    const heldEquiv = TRIGGER_TO_HELD[selIn.value];
+    const isSame = heldEquiv && pills.some(p => p.classList.contains('active') && p.textContent === heldEquiv);
+    triggerError.style.display = isSame ? 'block' : 'none';
+    triggerWarn.style.display = (!isSame && isLR && !hasMod) ? 'block' : 'none';
+  };
+  modUI.addEventListener('click', () => setTimeout(_updateTriggerWarn, 0));
+  _updateTriggerWarn();
+  selIn.onchange = () => {
+    recIn.wrap.style.display = selIn.value === "Custom" ? "inline-flex" : "none";
+    _updateTriggerWarn();
+    save();
+  };
+  const _iG = data?.isGest;
+  const gestVal = (_iG === "Yes" || _iG === "Gesture" || _iG === "On") ? "On" : "Off";
+  const selGest = createSelect(["Off", "On"], gestVal);
+  const mainAct = createActionInterface(data?.mainAction);
+
+  const gList = document.createElement('div'); gList.className = 'gesture-list';
+  gList.style.display = gestVal === "On" ? 'block' : 'none';
+
+  // Compact view (shown when collapsed in gesture mode)
+  const compactView = document.createElement('div'); compactView.className = 'gesture-compact';
+  const DIR_ORDER = ['Left','Right','Up','Down','Tap'];
+  const DIR_ICONS = { Left:'←', Right:'→', Up:'↑', Down:'↓', Tap:'○' };
+
+  const updateCompact = () => {
+    compactView.innerHTML = '';
+    const grid = document.createElement('div'); grid.className = 'gc-grid';
+    DIR_ORDER.forEach(dir => {
+      const v = gList.querySelector(`.gesture-row[data-dir="${dir}"] .gesture-row-bd select`)?.value || 'Passthrough';
+      const cell = document.createElement('div');
+      cell.className = 'gc-item' + (dir === 'Tap' ? ' gc-tap' : '') + (v && v !== 'Passthrough' && v !== 'None' ? ' gc-set' : '');
+      const ic = document.createElement('span'); ic.className = 'gc-icon'; ic.textContent = DIR_ICONS[dir];
+      cell.append(ic, GESTURE_SUMMARY[v] || v);
+      grid.appendChild(cell);
+    });
+    compactView.appendChild(grid);
+  };
+
+  let isCollapsed = false;
+  const toggleCollapse = () => {
+    isCollapsed = !isCollapsed;
+    tr.classList.toggle('open', !isCollapsed);
+
+    // Collapse/expand modifier pills
+    const hasActive = [...modUI.querySelectorAll('.mod-pill')].some(p => p.classList.contains('active') || p.dataset.customMod);
+    [...modUI.children].forEach(pill => {
+      if (isCollapsed) {
+        const keep = pill.classList.contains('active') || pill.dataset.customMod;
+        pill.style.display = keep ? '' : 'none';
+      } else {
+        pill.style.display = '';
+      }
+    });
+    let nonePill = modUI.querySelector('.mod-none-label');
+    if (isCollapsed && !hasActive) {
+      if (!nonePill) { nonePill = document.createElement('span'); nonePill.className = 'mod-none-label'; nonePill.textContent = '+ none'; modUI.appendChild(nonePill); }
+      nonePill.style.display = '';
+    } else if (nonePill) {
+      nonePill.style.display = 'none';
+    }
+
+    // Collapse/expand gesture or action builder
+    if (selGest.value === 'On') {
+      updateCompact();
+      compactView.classList.toggle('visible', isCollapsed);
+      gList.style.display = isCollapsed ? 'none' : 'block';
+    } else {
+      // Always clean up first so lastElementChild is reliable
+      mainAct.querySelector('.shortcut-preview')?.remove();
+      mainAct.style.cssText = '';
+      const uiBox = mainAct.lastElementChild;
+      if (uiBox) uiBox.style.display = isCollapsed ? 'none' : '';
+      if (isCollapsed && mainAct.querySelector('select')?.value === 'Shortcut') {
+        const mods = [...mainAct.querySelectorAll('.mod-pill.active[data-mod]')].map(p => p.dataset.mod);
+        const key = mainAct.querySelector('.rec-input')?.value || '';
+        const tokens = [...mods, key].filter(Boolean);
+        if (tokens.length) {
+          const preview = document.createElement('div'); preview.className = 'shortcut-preview';
+          tokens.forEach(t => { const c = document.createElement('span'); c.className = 'shortcut-chip'; c.textContent = t; preview.appendChild(c); });
+          mainAct.insertBefore(preview, uiBox);
+          mainAct.style.cssText = 'display:flex;align-items:center;gap:6px;';
+        }
+      }
+    }
+  };
+
+  GESTURE_DIRS.forEach(({ dir, icon, label, noneLabel }) => {
+    const row = document.createElement('div');
+    row.className = 'gesture-row'; row.dataset.dir = dir;
+
+    const hd = document.createElement('div'); hd.className = 'gesture-row-hd';
+    const iconEl = document.createElement('span'); iconEl.className = 'gesture-row-icon'; iconEl.textContent = icon;
+    const info = document.createElement('div'); info.className = 'gesture-row-info';
+    const titleEl = document.createElement('span'); titleEl.className = 'gesture-row-title'; titleEl.textContent = label;
+    const summaryEl = document.createElement('span'); summaryEl.className = 'gesture-row-summary';
+    info.append(titleEl, summaryEl);
+    const gChevron = document.createElement('span'); gChevron.className = 'gesture-row-chevron'; gChevron.textContent = '›';
+    hd.append(iconEl, info, gChevron);
+
+    const bd = document.createElement('div'); bd.className = 'gesture-row-bd';
+    const iface = createActionInterface(data?.gestures?.[dir]);
+
+    const typeSelect = iface.querySelector('select');
+    const updateSummary = () => {
+      const v = typeSelect.value;
+      summaryEl.textContent = (v === 'None' && noneLabel) ? noneLabel : (GESTURE_SUMMARY[v] || v);
+    };
+    const origChange = typeSelect.onchange;
+    typeSelect.onchange = (e) => { origChange?.(e); updateSummary(); if (isCollapsed) updateCompact(); };
+    updateSummary();
+
+    hd.onclick = () => { row.classList.toggle('open'); };
+    bd.appendChild(iface);
+    row.append(hd, bd);
+    gList.appendChild(row);
+  });
+
+  // compactView is a sibling of gList (not inside it) to avoid the ghost border bug
+
+  selGest.onchange = () => {
+    const v = selGest.value;
+    if (!isCollapsed) {
+      gList.style.display = v === "On" ? 'block' : 'none';
+      mainAct.style.display = v === "Off" ? 'block' : 'none';
+    }
+    if (isCollapsed) {
+      if (v === 'On') {
+        updateCompact();
+        compactView.classList.add('visible');
+        gList.style.display = 'none';
+        mainAct.style.display = 'none';
+      } else {
+        compactView.classList.remove('visible');
+        // Restore mainAct in its collapsed state (inner UI hidden)
+        mainAct.style.display = '';
+        const uiBox = mainAct.lastElementChild;
+        if (uiBox) uiBox.style.display = 'none';
+      }
+    }
+    save();
+  };
+  if (gestVal === "On") mainAct.style.display = 'none';
+
+  // Drag-to-reorder handle
+  const grip = document.createElement('span'); grip.className = 'drag-handle'; grip.textContent = '⠿'; grip.title = 'Drag to reorder';
+  grip.addEventListener('mousedown', () => { tr.draggable = true; });
+  tr.addEventListener('dragstart', (e) => {
+    _dragRow = tr;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => tr.classList.add('row-dragging'), 0);
+  });
+  tr.addEventListener('dragend', () => {
+    tr.draggable = false;
+    tr.classList.remove('row-dragging');
+    tbody.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+    _dragRow = null;
+    save();
+  });
+  tr.addEventListener('dragover', (e) => {
+    if (!_dragRow || _dragRow === tr) return;
+    e.preventDefault();
+    tbody.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+    tr.classList.add('drag-over');
+    const rect = tr.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) tbody.insertBefore(_dragRow, tr);
+    else tbody.insertBefore(_dragRow, tr.nextSibling);
+  });
+  tr.addEventListener('drop', (e) => e.preventDefault());
+
+  const tTd = document.createElement('td');
+  tTd.style.whiteSpace = 'nowrap';
+  tTd.append(grip, selIn, recIn.wrap, triggerWarn, triggerError);
+
+  const actTd = document.createElement('td'); actTd.append(mainAct, gList, compactView);
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn-danger btn-icon'; delBtn.textContent = '×';
+  delBtn.onclick = () => { tr.remove(); save(); };
+
+  // Click on empty row space also toggles collapse
+  tr.onclick = (e) => {
+    if (e.target.closest('select,input,button,label,.mod-pill,.tag,.gesture-row,.builder-container')) return;
+    toggleCollapse();
+  };
+
+  tr.append(tTd, td(modUI), td(selGest), actTd, td(delBtn));
+  tbody.appendChild(tr);
+  save();
+}
+
+/* ── SIDEBAR ── */
+function renderSidebar() {
+  ctxList.innerHTML = '';
+  const total = ctxContainer.children.length;
+  [...ctxContainer.children].forEach((ctx, i) => {
+    const isGlobal = ctx.dataset.global === 'true';
+    const customLabel = ctx.dataset.label || '';
+    const progs = [...ctx.querySelectorAll('.tag span')].map(s => s.textContent);
+    const rowCount = ctx.querySelectorAll('tbody tr.binding-row').length;
+
+    const item = document.createElement('div');
+    item.className = 'ctx-item' + (i === selectedIdx ? ' active' : '');
+    item.onclick = () => selectContext(i);
+
+    const icon = document.createElement('div'); icon.className = 'ctx-item-icon';
+    icon.textContent = isGlobal ? '🌍' : '📌';
+
+    const itemBody = document.createElement('div'); itemBody.className = 'ctx-item-body';
+
+    const name = document.createElement('div'); name.className = 'ctx-item-name';
+    if (customLabel) {
+      name.textContent = customLabel;
+    } else if (isGlobal) {
+      name.textContent = 'Global Fallback';
+    } else if (progs.length === 0) {
+      name.textContent = 'No apps yet';
+      name.style.fontStyle = 'italic';
+      name.style.color = 'var(--text-muted)';
+    } else {
+      name.textContent = progs[0];
+    }
+
+    const sub = document.createElement('div'); sub.className = 'ctx-item-sub';
+    if (isGlobal) {
+      sub.textContent = `${rowCount} binding${rowCount !== 1 ? 's' : ''}`;
+    } else if (customLabel && progs.length) {
+      sub.textContent = `${progs[0]}${progs.length > 1 ? ` +${progs.length - 1}` : ''} · ${rowCount} binding${rowCount !== 1 ? 's' : ''}`;
+    } else if (progs.length > 1) {
+      sub.textContent = `+${progs.length - 1} more · ${rowCount} binding${rowCount !== 1 ? 's' : ''}`;
+    } else {
+      sub.textContent = `${rowCount} binding${rowCount !== 1 ? 's' : ''}`;
+    }
+
+    itemBody.append(name, sub);
+
+    const count = document.createElement('div'); count.className = 'ctx-item-count';
+    count.textContent = rowCount;
+
+    const menuBtn = document.createElement('button'); menuBtn.className = 'ctx-menu-btn';
+    menuBtn.title = 'Context options'; menuBtn.textContent = '⋮';
+    menuBtn.onclick = (e) => { e.stopPropagation(); showCtxMenu(i, menuBtn, total); };
+
+    item.append(icon, itemBody, count, menuBtn);
+    ctxList.appendChild(item);
+  });
+}
+
+function selectContext(i) {
+  [...ctxContainer.children].forEach((ctx, j) => ctx.classList.toggle('active', j === i));
+  selectedIdx = i;
+  const hasSelection = i >= 0 && i < ctxContainer.children.length;
+  mainEmpty.style.display = hasSelection ? 'none' : 'flex';
+  ctxContainer.style.display = hasSelection ? 'flex' : 'none';
+  renderSidebar();
+}
+
+function showEmpty() {
+  [...ctxContainer.children].forEach(ctx => ctx.classList.remove('active'));
+  mainEmpty.querySelector('h2').textContent = 'No context selected';
+  mainEmpty.querySelector('p').textContent = 'Select a context from the sidebar, or create one.';
+  mainEmpty.style.display = 'flex';
+  ctxContainer.style.display = 'none';
+}
+
+/* ── STATE ── */
+function save() {
+  const state = [...ctxContainer.children].map(ctx => ({
+    isGlobal: ctx.dataset.global === "true",
+    label: ctx.dataset.label || "",
+    progs: [...ctx.querySelectorAll('.tag span')].map(s => s.textContent),
+    rows: [...ctx.querySelectorAll('tbody tr.binding-row')].map(tr => ({
+      input: tr.querySelector('td:nth-child(1) select').value,
+      customIn: tr.querySelector('td:nth-child(1) .rec-input').value,
+      mods: [...tr.querySelectorAll('td:nth-child(2) .mod-pill.active')].map(b => b.dataset.customMod || b.textContent),
+      isGest: tr.querySelector('td:nth-child(3) select').value,
+      mainAction: getActionState(tr.querySelector('td:nth-child(4) > div:first-child')),
+      gestures: Object.fromEntries(GESTURE_DIRS.map(({ dir }) => [dir, getActionState(tr.querySelector(`.gesture-row[data-dir="${dir}"] .gesture-row-bd`))]))
+    }))
+  }));
+  localStorage.setItem('ahk_mouse_cfg', JSON.stringify(state));
+  renderSidebar();
+  checkConflicts(state);
+  updateDemoVisibility();
+  return state;
+}
+
+function updateDemoVisibility() {
+  document.querySelectorAll('.ctx-panel-body').forEach(bodyEl => {
+    const hasRows = !!bodyEl.querySelector('tbody tr.binding-row');
+    const demoEl = bodyEl.querySelector('.binding-demo');
+    if (demoEl) demoEl.style.display = hasRows ? 'none' : '';
+  });
+}
+
+function createBindingDemo() {
+  const demo = document.createElement('div');
+  demo.className = 'binding-demo';
+
+  // Mouse SVG — solid icon style, both side buttons on left
+  const mouseSVG = `<svg viewBox="0 0 60 92" width="88" height="135" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">
+    <!-- solid body -->
+    <path fill="#242424" d="M8,36 Q8,5 30,5 Q52,5 52,36 L52,70 Q52,87 30,87 Q8,87 8,70 Z"/>
+    <!-- button-area top cap (slightly lighter to read as separate buttons) -->
+    <path fill="#2c2c2c" d="M8,36 Q8,5 30,5 Q52,5 52,36 L52,40 L8,40 Z"/>
+    <!-- vertical divider L/R -->
+    <rect x="28.5" y="5" width="3" height="35" fill="#111"/>
+    <!-- horizontal divider -->
+    <rect x="8" y="38.5" width="44" height="2.5" fill="#111"/>
+    <!-- scroll wheel slot (narrow dark cutout) -->
+    <rect x="24" y="12" width="12" height="24" rx="6" fill="#111"/>
+    <!-- scroll wheel indicator — circle -->
+    <circle class="dm-wheel-ind" cx="30" cy="24" r="5" fill="#3c3c3c" style="transform-box:fill-box;transform-origin:center"/>
+    <!-- transparent hit areas for highlights -->
+    <path class="dm-lbtn" d="M9,36 Q9,6 30,6 L30,38 L9,38 Z"/>
+    <path class="dm-rbtn" d="M30,6 Q51,6 51,36 L51,38 L30,38 Z"/>
+    <rect class="dm-mbtn" x="24" y="12" width="12" height="24" rx="6" fill="transparent"/>
+    <!-- side buttons — both on LEFT (thumb side), positioned toward the front -->
+    <rect class="dm-sidebtn dm-backbtn" fill="#2a2a2a" x="2" y="40" width="8" height="12" rx="4"/>
+    <rect class="dm-sidebtn dm-fwdbtn"  fill="#2a2a2a" x="2" y="55" width="8" height="12" rx="4"/>
+  </svg>`;
+
+  demo.innerHTML = `
+    <div class="demo-mouse-area">
+      <div class="demo-badge"><div class="demo-badge-keys"></div><span class="demo-badge-label"></span></div>
+      <div class="demo-mouse-wrap">${mouseSVG}</div>
+    </div>
+    <span class="demo-hint">Add a binding above to get started</span>`;
+
+  const svg       = demo.querySelector('svg');
+  const mouseWrap = demo.querySelector('.demo-mouse-wrap');
+  const badge     = demo.querySelector('.demo-badge');
+  const badgeKeys = demo.querySelector('.demo-badge-keys');
+  const badgeLabel= demo.querySelector('.demo-badge-label');
+  const wind      = () => svg.querySelector('.dm-wheel-ind');
+
+  function lit(sel) { svg.querySelector(sel).classList.add('lit'); }
+  function unlit()  { svg.querySelectorAll('.dm-lbtn,.dm-rbtn,.dm-mbtn,.dm-backbtn,.dm-fwdbtn').forEach(e => e.classList.remove('lit')); }
+
+  function reset() {
+    unlit();
+    wind().className = 'dm-wheel-ind';
+    mouseWrap.classList.remove('move-right', 'move-left');
+    badge.classList.remove('show');
+    badgeKeys.innerHTML = ''; badgeLabel.textContent = '';
+  }
+
+  function showBadge(keys, label) {
+    badgeKeys.innerHTML = keys.map(k => `<span class="demo-key-chip">${k}</span>`).join('');
+    badgeLabel.textContent = label;
+    badge.classList.add('show');
+  }
+  function hideBadge() { badge.classList.remove('show'); }
+
+  function moveMouseThen(dir, delay, fn) {
+    timers.push(setTimeout(() => mouseWrap.classList.add(dir === 'right' ? 'move-right' : 'move-left'), delay));
+    timers.push(setTimeout(fn, delay + 480));
+  }
+
+  function seq(steps) { steps.forEach(([t, fn]) => timers.push(setTimeout(fn, t))); }
+
+  const SCENES = [
+    // 1: Middle → swipe right → Snap Right
+    { dur: 4600, run() {
+      lit('.dm-mbtn');
+      moveMouseThen('right', 450, () => showBadge(['Win', '→'], 'Snap Right'));
+      seq([
+        [3500, () => { hideBadge(); mouseWrap.classList.remove('move-right'); }],
+      ]);
+    }},
+    // 2: Back → swipe left → Undo
+    { dur: 4600, run() {
+      lit('.dm-backbtn');
+      moveMouseThen('left', 450, () => showBadge(['Ctrl', 'Z'], 'Undo'));
+      seq([
+        [3500, () => { hideBadge(); mouseWrap.classList.remove('move-left'); }],
+      ]);
+    }},
+    // 3: Middle held + scroll → Volume Up then Down
+    { dur: 6800, run() {
+      lit('.dm-mbtn');
+      seq([
+        [350,  () => wind().classList.add('su')],
+        [750,  () => showBadge(['🔊'], 'Volume Up')],
+        [2400, () => { hideBadge(); wind().classList.remove('su'); }],
+        [2750, () => wind().classList.add('sd')],
+        [3150, () => showBadge(['🔉'], 'Volume Down')],
+        [6100, () => { hideBadge(); wind().classList.remove('sd'); }],
+      ]);
+    }},
+    // 4: Middle held + Forward (side btn) → Next Track
+    { dur: 4600, run() {
+      lit('.dm-mbtn');
+      seq([
+        [500,  () => lit('.dm-fwdbtn')],
+        [900,  () => showBadge(['⏭'], 'Next Track')],
+        [3800, hideBadge],
+      ]);
+    }},
+    // 5: Forward → swipe right → Paste
+    { dur: 4600, run() {
+      lit('.dm-fwdbtn');
+      moveMouseThen('right', 450, () => showBadge(['Ctrl', 'V'], 'Paste'));
+      seq([
+        [3500, () => { hideBadge(); mouseWrap.classList.remove('move-right'); }],
+      ]);
+    }},
+  ];
+
+  let sceneIdx = 0, timers = [];
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  function runScene() {
+    if (!demo.isConnected) { clearTimers(); return; }
+    if (demo.style.display === 'none') { timers.push(setTimeout(runScene, 600)); return; }
+    reset();
+    const scene = SCENES[sceneIdx];
+    sceneIdx = (sceneIdx + 1) % SCENES.length;
+    scene.run();
+    timers.push(setTimeout(() => unlit(), scene.dur - 400));
+    timers.push(setTimeout(runScene, scene.dur));
+  }
+
+  setTimeout(runScene, 900);
+  return demo;
+}
+
+function checkConflicts(state) {
+  document.querySelectorAll('tr.conflict-row').forEach(r => { r.classList.remove('conflict-row'); r.title = ''; });
+  document.querySelectorAll('.tag.conflict-tag').forEach(t => { t.classList.remove('conflict-tag'); t.title = ''; });
+  document.querySelectorAll('.conflict-warn').forEach(el => el.remove());
+  if (!conflictsEnabled) return;
+
+  // Within each context: rows sharing the same trigger + modifier combo
+  state.forEach((ctx, ci) => {
+    const seen = {};
+    const domRows = [...(ctxContainer.children[ci]?.querySelectorAll('tbody tr.binding-row') || [])];
+    (ctx.rows || []).forEach((row, ri) => {
+      const trigger = row.input === 'Custom' ? (row.customIn || '') : row.input;
+      if (!trigger) return;
+      const mods = [...(row.mods || [])].sort().join('\x00');
+      const k = `${trigger}:${mods}`;
+      if (!seen[k]) seen[k] = [];
+      seen[k].push(ri);
+    });
+    Object.entries(seen).forEach(([, indices]) => {
+      if (indices.length < 2) return;
+      indices.forEach(i => {
+        if (domRows[i]) {
+          domRows[i].classList.add('conflict-row');
+          domRows[i].title = 'Duplicate trigger — the script may behave unpredictably.';
+          const firstTd = domRows[i].querySelector('td:first-child');
+          if (firstTd && !firstTd.querySelector('.conflict-warn')) {
+            const w = document.createElement('div');
+            w.className = 'trigger-warn conflict-warn';
+            w.textContent = 'The script may behave unpredictably when using the same trigger more than once.';
+            firstTd.appendChild(w);
+          }
+        }
+      });
+    });
+  });
+
+  // Across contexts: same app name in multiple non-global contexts
+  const appMap = {};
+  state.forEach((ctx, ci) => {
+    if (ctx.isGlobal) return;
+    (ctx.progs || []).forEach(app => {
+      if (!appMap[app]) appMap[app] = [];
+      appMap[app].push(ci);
+    });
+  });
+  Object.entries(appMap).forEach(([app, ctxIndices]) => {
+    if (ctxIndices.length < 2) return;
+    ctxIndices.forEach(ci => {
+      ctxContainer.children[ci]?.querySelectorAll('.tag').forEach(tag => {
+        if (tag.querySelector('span')?.textContent === app) {
+          tag.classList.add('conflict-tag');
+          tag.title = 'This app appears in multiple contexts — the script may behave unpredictably.';
+        }
+      });
+    });
+  });
+}
+
+function getActionState(el) {
+  if (!el) return { type: "Passthrough", steps: [] };
+  const type = el.querySelector('select')?.value || "None";
+  if (type === "Shortcut") {
+    const modPills = [...el.querySelectorAll('.mod-pill.active[data-mod]')];
+    const keyInput = el.querySelector('.rec-input');
+    const steps = [
+      ...modPills.map(b => ({ key: b.dataset.mod, delay: 0 })),
+      ...(keyInput?.value ? [{ key: keyInput.value, delay: 0 }] : [])
+    ];
+    return { type, steps };
+  }
+  const steps = [...el.querySelectorAll('.builder-step')].map(s => ({
+    key: s.querySelector('input.rec-input')?.value || "",
+    delay: s.querySelector('input[type="number"]')?.value || "0"
+  }));
+  return { type, steps };
+}
+
+/* ── CONTEXT MENU ── */
+let _closeMenu = null;
+
+function showCtxMenu(idx, anchorEl, total) {
+  let menu = document.getElementById('ctx-menu');
+  if (!menu) {
+    menu = document.createElement('div'); menu.id = 'ctx-menu';
+    document.body.appendChild(menu);
+  }
+
+  menu.innerHTML = '';
+
+  const item = (icon, label, fn, cls = '') => {
+    const el = document.createElement('button'); el.className = 'ctx-menu-item ' + cls;
+    el.innerHTML = `<span style="width:16px;text-align:center">${icon}</span> ${label}`;
+    el.onclick = () => { closeMenu(); fn(); };
+    return el;
+  };
+  const sep = () => { const d = document.createElement('div'); d.className = 'ctx-menu-sep'; return d; };
+  const disabledItem = (icon, label) => {
+    const el = item(icon, label, () => {}); el.disabled = true; return el;
+  };
+
+  menu.append(
+    item('✏️', 'Rename', () => renameContext(idx)),
+    item('⧉', 'Duplicate', () => duplicateContext(idx)),
+    sep(),
+    idx === 0 ? disabledItem('↑', 'Move Up') : item('↑', 'Move Up', () => moveContext(idx, -1)),
+    idx === total - 1 ? disabledItem('↓', 'Move Down') : item('↓', 'Move Down', () => moveContext(idx, +1)),
+    sep(),
+    item('🗑', 'Clear Bindings', () => clearBindings(idx)),
+    sep(),
+    item('✕', 'Delete Context', () => deleteContext(idx), 'danger')
+  );
+
+  const r = anchorEl.getBoundingClientRect();
+  const menuW = 180, menuH = 260;
+  let left = r.right + 4;
+  let top = r.top;
+  if (left + menuW > window.innerWidth) left = r.left - menuW - 4;
+  if (top + menuH > window.innerHeight) top = window.innerHeight - menuH - 8;
+  menu.style.left = left + 'px';
+  menu.style.top = Math.max(8, top) + 'px';
+  menu.style.display = 'block';
+
+  if (_closeMenu) document.removeEventListener('click', _closeMenu);
+  _closeMenu = (e) => { if (!menu.contains(e.target)) closeMenu(); };
+  setTimeout(() => document.addEventListener('click', _closeMenu), 0);
+}
+
+function closeMenu() {
+  const menu = document.getElementById('ctx-menu');
+  if (menu) menu.style.display = 'none';
+  if (_closeMenu) { document.removeEventListener('click', _closeMenu); _closeMenu = null; }
+}
+
+function renameContext(idx) {
+  const ctx = ctxContainer.children[idx];
+  const current = ctx.dataset.label || '';
+  const name = prompt('Context label (leave blank to use app names):', current);
+  if (name === null) return;
+  ctx.dataset.label = name.trim();
+  save();
+}
+
+function duplicateContext(idx) {
+  const state = save();
+  const data = JSON.parse(JSON.stringify(state[idx]));
+
+  // Derive the base display name, stripping any trailing " (N)"
+  const srcCtx = ctxContainer.children[idx];
+  const rawName = srcCtx.dataset.label ||
+    (data.isGlobal ? 'Global Fallback' : (data.progs.length ? data.progs[0] : 'Context'));
+  const base = rawName.replace(/\s*\(\d+\)$/, '');
+
+  // Find the highest (N) already used for this base across all contexts
+  let maxN = 0;
+  [...ctxContainer.children].forEach(ctx => {
+    const lbl = ctx.dataset.label ||
+      (ctx.dataset.global === 'true' ? 'Global Fallback' :
+        ([...ctx.querySelectorAll('.tag span')].map(s => s.textContent)[0] || 'Context'));
+    const m = lbl.match(/^(.+?)\s*\((\d+)\)$/);
+    if (m && m[1] === base) maxN = Math.max(maxN, parseInt(m[2]));
+  });
+
+  data.label = `${base} (${maxN + 1})`;
+  addContext(data.isGlobal, data, true);
+  const newNode = ctxContainer.lastElementChild;
+  ctxContainer.insertBefore(newNode, ctxContainer.children[idx + 1] ?? null);
+  selectedIdx = idx + 1;
+  selectContext(selectedIdx);
+  save();
+}
+
+function moveContext(idx, dir) {
+  const nodes = [...ctxContainer.children];
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= nodes.length) return;
+  if (dir === -1) ctxContainer.insertBefore(nodes[idx], nodes[idx - 1]);
+  else ctxContainer.insertBefore(nodes[idx + 1], nodes[idx]);
+  if (selectedIdx === idx) selectedIdx = newIdx;
+  else if (selectedIdx === newIdx) selectedIdx = idx;
+  selectContext(selectedIdx);
+  save();
+}
+
+function clearBindings(idx) {
+  if (!confirm('Clear all bindings from this context?')) return;
+  ctxContainer.children[idx].querySelector('tbody').innerHTML = '';
+  save();
+}
+
+function deleteContext(idx) {
+  if (!confirm('Delete this context and all its bindings?')) return;
+  ctxContainer.children[idx].remove();
+  if (selectedIdx === idx) { selectedIdx = -1; showEmpty(); }
+  else if (selectedIdx > idx) selectedIdx--;
+  renderSidebar(); save();
+}
+
+const _isGestMode = (row) => !["No", "None", "Off"].includes(row.isGest) && !!row.isGest;
+
+function _showDangerModal(warnings) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div'); overlay.className = 'danger-overlay';
+    const modal = document.createElement('div'); modal.className = 'danger-modal';
+    const icon = document.createElement('div'); icon.className = 'danger-modal-icon'; icon.textContent = '⚠️';
+    const title = document.createElement('div'); title.className = 'danger-modal-title'; title.textContent = 'Potentially dangerous bindings';
+    const body = document.createElement('div'); body.className = 'danger-modal-body';
+    body.innerHTML = warnings.map(w => `• ${w}`).join('<br>') +
+      `<br><br>These bindings will intercept <b>every</b> left or right click in the matching context, which may make your mouse unusable. Consider adding a modifier or enabling gesture mode.`;
+    const btns = document.createElement('div'); btns.className = 'danger-modal-btns';
+    const back = document.createElement('button'); back.className = 'btn-muted'; back.textContent = 'Go back';
+    const proceed = document.createElement('button'); proceed.className = 'btn-danger-proceed'; proceed.textContent = 'I know what I\'m doing';
+    back.onclick = () => { overlay.remove(); resolve(false); };
+    proceed.onclick = () => { overlay.remove(); resolve(true); };
+    btns.append(back, proceed);
+    modal.append(icon, title, body, btns);
+    overlay.appendChild(modal);
+    overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } };
+    document.body.appendChild(overlay);
+  });
+}
+
+/* ── EXPORT AHK ── */
+async function exportAHK(forceNew = false) {
+  const state = save();
+
+  // ── Major warning: left/right click with no modifier and no gestures ──
+  const dangerWarnings = [];
+  state.forEach(ctx => {
+    (ctx.rows || []).forEach(row => {
+      if ((row.input === 'Left' || row.input === 'Right') && !_isGestMode(row) && !(row.mods && row.mods.length)) {
+        const scope = ctx.isGlobal ? 'Global context' : (ctx.progs && ctx.progs.length ? ctx.progs.join(', ') : 'unnamed context');
+        dangerWarnings.push(`<b>${row.input} click</b> with no modifier — ${scope}`);
+      }
+    });
+  });
+  if (dangerWarnings.length) {
+    const proceed = await _showDangerModal(dangerWarnings);
+    if (!proceed) return;
+  }
+
+  let ahk = `#Requires AutoHotkey v2.0\n#SingleInstance Force\nCoordMode("Mouse","Screen")\nA_MaxHotkeysPerInterval := 1000\ngestureThreshold := 40\n\n`;
+
+  /* ── Script toggle hotkey ── */
+  const _btnMap = { Middle: 'MButton', Back: 'XButton1', Forward: 'XButton2' };
+  const toggleAhkBtn = (toggleSettings.enabled && toggleSettings.type === 'mouse')
+    ? (_btnMap[toggleSettings.button] || 'MButton') : null;
+  const toggleN = Math.max(2, parseInt(toggleSettings.count) || 5);
+  // timing window scales with count: 400 ms at 2 clicks, 600 ms at 10 clicks
+  const toggleWindow = Math.min(600, Math.round(400 + (toggleN - 2) * 25));
+  const toggleInject = toggleAhkBtn ? [
+    `  ; -- toggle (${toggleN}× rapid click)`,
+    `  global _tc, _tf`,
+    `  _t := A_TickCount`,
+    `  if (_t - _tf <= ${toggleWindow})`,
+    `      _tc += 1`,
+    `  else`,
+    `      _tc := 1`,
+    `  _tf := _t`,
+    `  if (_tc >= ${toggleN}) {`,
+    `      _tc := 0`,
+    `      Suspend(true)`,
+    `      ToolTip("✗  Mouse AHK — Disabled")`,
+    `      SetTimer(() => ToolTip(), -2000)`,
+    `      Return`,
+    `  }`,
+  ].join('\n') + '\n' : '';
+
+  // Convert "Ctrl+Shift+T" → "^+t" for AHK hotkey syntax
+  const keyShortcutToAhk = (shortcut) => {
+    const parts = (shortcut || 'F9').split('+');
+    const base = parts.pop();
+    let prefix = '';
+    parts.forEach(m => {
+      if (m === 'Ctrl')  prefix += '^';
+      if (m === 'Alt')   prefix += '!';
+      if (m === 'Shift') prefix += '+';
+      if (m === 'Win')   prefix += '#';
+    });
+    // Base key: single char stays lowercase; named keys stay as-is
+    const ahkBase = base.length === 1 ? base.toLowerCase() : base;
+    return prefix + ahkBase;
+  };
+
+  if (toggleSettings.enabled) {
+    if (toggleSettings.type === 'key') {
+      const k = toggleSettings.key || 'F9';
+      const ahkHk = keyShortcutToAhk(k);
+      ahk += `; ── Script Toggle (${k}) ──────────────────────────────────\n`;
+      ahk += `#SuspendExempt True\n`;
+      ahk += `${ahkHk}:: {\n`;
+      ahk += `    if (A_IsSuspended) {\n`;
+      ahk += `        Suspend(false)\n`;
+      ahk += `        ToolTip("✓  Mouse AHK — Enabled")\n`;
+      ahk += `    } else {\n`;
+      ahk += `        Suspend(true)\n`;
+      ahk += `        ToolTip("✗  Mouse AHK — Disabled")\n`;
+      ahk += `    }\n`;
+      ahk += `    SetTimer(() => ToolTip(), -2000)\n`;
+      ahk += `}\n`;
+      ahk += `#SuspendExempt False\n\n`;
+    } else {
+      // Mouse: global exempt only handles RE-ENABLE (when suspended); disable is injected per-handler below
+      const ahkBtn = toggleAhkBtn;
+      ahk += `; ── Script Toggle (${toggleN}× rapid click ${toggleSettings.button}) ──────────────────\n`;
+      ahk += `global _tc := 0, _tf := 0\n`;
+      ahk += `#SuspendExempt True\n`;
+      ahk += `~${ahkBtn}:: {\n`;
+      ahk += `    if (!A_IsSuspended)\n`;
+      ahk += `        Return\n`;
+      ahk += `    global _tc, _tf\n`;
+      ahk += `    _t := A_TickCount\n`;
+      ahk += `    if (_t - _tf <= ${toggleWindow})\n`;
+      ahk += `        _tc += 1\n`;
+      ahk += `    else\n`;
+      ahk += `        _tc := 1\n`;
+      ahk += `    _tf := _t\n`;
+      ahk += `    if (_tc >= ${toggleN}) {\n`;
+      ahk += `        _tc := 0\n`;
+      ahk += `        Suspend(false)\n`;
+      ahk += `        ToolTip("✓  Mouse AHK — Enabled")\n`;
+      ahk += `        SetTimer(() => ToolTip(), -2000)\n`;
+      ahk += `    }\n`;
+      ahk += `}\n`;
+      ahk += `#SuspendExempt False\n\n`;
+    }
+  }
+
+  const tokenFor = (k) => {
+    const low = (k || "").toLowerCase();
+    if (low === "win") return "#"; if (low === "ctrl") return "^";
+    if (low === "alt") return "!"; if (low === "shift") return "+";
+    return k && k.length === 1 ? k : `{${k}}`;
+  };
+
+  const buildActionLines = (act) => {
+    if (!act || act.type === "None" || act.type === "No Key" || act.type === "Passthrough") return "";
+    const _preset = CONFIG.presets.flatMap(g => g.items).find(p => p.label === act.type);
+    if (_preset) return _preset.ahk;
+    if (act.type === "Shortcut") {
+      let combo = ""; let hasWin = false;
+      act.steps.forEach(s => { const t = tokenFor(s.key); if (t === "#") hasWin = true; combo += t; });
+      return `Send("${hasWin ? "{Blind}" : ""}${combo}")`;
+    }
+    if (act.type === "Macro") return act.steps.map(s => {
+      const t = s.type || 'press';
+      const tok = t === 'down' ? `{${s.key} down}` : t === 'up' ? `{${s.key} up}` : `{${s.key}}`;
+      return `Send("${tok}")\n  Sleep(${s.delay})`;
+    }).join("\n  ");
+    if (act.type === "VolUp") return `Send("{Volume_Up}")`;
+    if (act.type === "VolDown") return `Send("{Volume_Down}")`;
+    if (act.type === "Mute") return `Send("{Volume_Mute}")`;
+    if (act.type === "Copy") return `Send("^c")`;
+    if (act.type === "Paste") return `Send("^v")`;
+    if (act.type === "Cut") return `Send("^x")`;
+    if (act.type === "Undo") return `Send("^z")`;
+    if (act.type === "Redo") return `Send("^y")`;
+    if (CONFIG.ahkMap[act.type]) return `Send("${CONFIG.ahkMap[act.type]}")`;
+    const libMacro = macroLibrary.find(m => m.name === act.type);
+    if (libMacro && libMacro.steps.length) return libMacro.steps.map(s => {
+      const t = s.type || 'press';
+      const tok = t === 'down' ? `{${s.key} down}` : t === 'up' ? `{${s.key} up}` : `{${s.key}}`;
+      return `Send("${tok}")\n  Sleep(${s.delay})`;
+    }).join("\n  ");
+    return "";
+  };
+
+  const buildGestureBlock = (hkKey, row, needsTilde = false, composite = null) => {
+    if (!_isGestMode(row)) {
+      const actionLine = buildActionLines(row.mainAction);
+      return actionLine ? `  ${actionLine}\n` : `  ; no action defined\n`;
+    }
+    let block = `\n  MouseGetPos(&sx, &sy)\n  KeyWait("${hkKey}")\n  MouseGetPos(&ex, &ey)\n  dx := ex - sx, dy := ey - sy\n  if (Abs(dx) < gestureThreshold && Abs(dy) < gestureThreshold) {\n    ; small movement -> TAP\n`;
+    if (composite?.actionLine) {
+      block += `    KeyWait("${composite.other}", "DT0.08")\n    if (GetKeyState("${composite.other}", "P")) {\n      ${composite.actionLine}\n      Return\n    }\n`;
+    }
+    const tapLines = buildActionLines(row.gestures?.Tap);
+    if (tapLines) block += `    ${tapLines}\n    Return\n  }\n`;
+    else block += needsTilde ? `    Return\n  }\n` : `    Send("{${hkKey}}")\n    Return\n  }\n`;
+    block += `\n  dir := (Abs(dx) > Abs(dy)) ? (dx > 0 ? "Right" : "Left") : (dy > 0 ? "Down" : "Up")\n`;
+    ["Up", "Down", "Left", "Right"].forEach(d => {
+      const actLines = buildActionLines(row.gestures?.[d]);
+      if (actLines) block += `  if (dir = "${d}") {\n    ${actLines}\n    Return\n  }\n`;
+    });
+    return block + `  Return\n`;
+  };
+
+  const _mouseHeld = { "Middle Held": "MButton", "Back Held": "XButton1", "Forward Held": "XButton2", "Left Held": "LButton", "Right Held": "RButton" };
+  const _modToKey  = { "Middle Held": "MButton", "Back Held": "XButton1", "Forward Held": "XButton2", "Left Held": "LButton", "Right Held": "RButton" };
+
+  state.forEach(ctx => {
+    const scopeExpr = ctx.isGlobal ? "" : (ctx.progs || []).map(p => `WinActive("ahk_exe ${p}")`).join(" || ");
+    const mapByKey = {};
+    const heldGroups = {}; // key: `${raw}|${heldBtn}` → { raw, heldBtn, entries: [{row, otherMods}] }
+
+    (ctx.rows || []).forEach(r => {
+      const raw = r.input === "Custom" ? r.customIn : (CONFIG.mouseMap[r.input] || r.input);
+      if (!raw || raw.includes("&")) return;
+
+      const heldMod = (r.mods || []).find(m => _mouseHeld[m]);
+      const baseMods = (r.mods || []).filter(m => CONFIG.modSymbols[m]).map(m => CONFIG.modSymbols[m]).join("");
+      const keyName = baseMods + raw;
+
+      if (heldMod) {
+        const heldBtn = _mouseHeld[heldMod];
+        if (heldBtn === raw) return; // skip degenerate same-button combo
+        // Any kbd modifiers + custom kbd mods + extra mouse-helds (rare) become GetKeyState checks
+        const otherMods = (r.mods || [])
+          .filter(m => m !== heldMod)
+          .map(m => _modToKey[m] || m);
+        const groupKey = `${raw}|${heldBtn}`;
+        if (!heldGroups[groupKey]) heldGroups[groupKey] = { raw, heldBtn, entries: [] };
+        heldGroups[groupKey].entries.push({ row: r, otherMods });
+      } else {
+        const customMods = (r.mods || []).filter(m => !CONFIG.modSymbols[m]);
+        if (!mapByKey[keyName]) mapByKey[keyName] = { keyName, raw, customs: [] };
+        if (customMods.length) mapByKey[keyName].customs.push({ row: r, mods: customMods });
+        else mapByKey[keyName].base = r;
+      }
+    });
+
+    ahk += scopeExpr ? `#HotIf ${scopeExpr}\n` : "#HotIf\n";
+
+    // Mouse-held variants → AHK native combo hotkeys (avoids OS interception of LButton/RButton state)
+    Object.values(heldGroups).forEach(({ raw, heldBtn, entries }) => {
+      ahk += `~${heldBtn} & ${raw}:: {\n`;
+      if (toggleAhkBtn && raw === toggleAhkBtn) ahk += toggleInject;
+      entries.sort((a, b) => b.otherMods.length - a.otherMods.length);
+      entries.forEach(({ row, otherMods }) => {
+        if (otherMods.length) {
+          const cond = otherMods.map(m => `GetKeyState("${m}", "P")`).join(" && ");
+          if (!_isGestMode(row)) {
+            const actLine = buildActionLines(row.mainAction);
+            ahk += `  if (${cond}) {\n    ${actLine || "; no action"}\n    Return\n  }\n\n`;
+          } else {
+            ahk += `  if (${cond}) {\n`;
+            ahk += buildGestureBlock(raw, row, false, null).split("\n").map(l => l ? "  " + l : l).join("\n") + "\n  }\n\n";
+          }
+        } else {
+          if (!_isGestMode(row)) {
+            const actLine = buildActionLines(row.mainAction);
+            ahk += `  ${actLine || "; no action"}\n  Return\n`;
+          } else {
+            ahk += buildGestureBlock(raw, row, false, null);
+          }
+        }
+      });
+      ahk += `}\n\n`;
+    });
+
+    // Standard hotkeys (no mouse-held mods)
+    Object.values(mapByKey).forEach(entry => {
+      const hk = entry.keyName;
+      if (entry.raw === "MButton") {
+        ahk += `MButton:: {\n`;
+        if (toggleAhkBtn === 'MButton') ahk += toggleInject;
+        (entry.customs || []).forEach(({ row, mods }) => {
+          const cond = mods.map(m => `GetKeyState("${_modToKey[m] || m}", "P")`).join(" && ");
+          if (!_isGestMode(row)) {
+            const actLine = buildActionLines(row.mainAction);
+            ahk += `  if (${cond}) {\n    ${actLine || "; no action"}\n    Return\n  }\n\n`;
+          } else {
+            ahk += `  if (${cond}) {\n`;
+            ahk += buildGestureBlock(entry.raw, row, false, null).split("\n").map(l => l ? "  " + l : l).join("\n") + "\n  }\n\n";
+          }
+        });
+        if (entry.base) ahk += buildGestureBlock(entry.raw, entry.base, false, null).split("\n").map(l => l ? "  " + l : l).join("\n") + "\n";
+        else ahk += `  ; No mapping for middle button\n  Send("{MButton}")\n`;
+        ahk += `}\n\n`; return;
+      }
+      const needsTilde = (entry.raw === "XButton1" || entry.raw === "XButton2") && !entry.base && !(entry.customs && entry.customs.length);
+      ahk += `${needsTilde ? "~" : ""}${hk}:: {\n`;
+      if (toggleAhkBtn && entry.raw === toggleAhkBtn) ahk += toggleInject;
+      (entry.customs || []).forEach(({ row, mods }) => {
+        const cond = mods.map(m => `GetKeyState("${_modToKey[m] || m}", "P")`).join(" && ");
+        if (!_isGestMode(row)) {
+          const actLine = buildActionLines(row.mainAction);
+          ahk += `  if (${cond}) {\n    ${actLine || "; no action"}\n    Return\n  }\n\n`;
+        } else {
+          ahk += `  if (${cond}) {\n`;
+          ahk += buildGestureBlock(entry.raw, row, needsTilde, null).split("\n").map(l => l ? "  " + l : l).join("\n") + "\n  }\n\n";
+        }
+      });
+      if (entry.base) {
+        ahk += buildGestureBlock(entry.raw, entry.base, needsTilde, null).split("\n").map(l => l ? "  " + l : l).join("\n") + "\n";
+      } else {
+        ahk += needsTilde ? `  ; No base mapping: pass native\n` : `  ; No base mapping: send native\n  Send("{${entry.raw}}")\n`;
+      }
+      ahk += `}\n\n`;
+    });
+
+    ahk += "#HotIf\n\n";
+  });
+
+  ahk += `; CONFIG_DATA: ${JSON.stringify({ contexts: state, macros: macroLibrary, toggle: toggleSettings })}`;
+
+  if (window.showSaveFilePicker && (_ahkFileHandle === null || forceNew)) {
+    try {
+      _ahkFileHandle = await window.showSaveFilePicker({
+        suggestedName: 'Mouse_Gestures.ahk',
+        types: [{ description: 'AutoHotkey Script', accept: { 'text/plain': ['.ahk'] } }]
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      _ahkFileHandle = null;
+    }
+  }
+
+  if (_ahkFileHandle) {
+    try {
+      const writable = await _ahkFileHandle.createWritable();
+      await writable.write(ahk);
+      await writable.close();
+      _showExportToast(_ahkFileHandle.name);
+    } catch (e) {
+      _ahkFileHandle = null;
+      _blobDownload(ahk);
+      _showExportToast(null);
+    }
+  } else {
+    _blobDownload(ahk);
+    _showExportToast(null);
+  }
+  _updateExportUI();
+}
+
+function _blobDownload(ahk) {
+  const blob = new Blob([ahk], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Mouse_Gestures.ahk'; a.click();
+}
+
+function _updateExportUI() {
+  const btnUpdate = document.getElementById('btn-export-as');
+  if (!btnUpdate) return;
+  if (_ahkFileHandle) {
+    const name = _ahkFileHandle.name || 'Mouse_Gestures.ahk';
+    btnUpdate.textContent = `↑ Update ${name.length > 16 ? name.slice(0, 14) + '…' : name}`;
+    btnUpdate.title = `Overwrite ${name}`;
+    btnUpdate.style.display = '';
+  } else {
+    btnUpdate.style.display = 'none';
+  }
+}
+
+let _toastTimer = null;
+function _showExportToast(filename) {
+  let toast = document.getElementById('export-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'export-toast';
+    document.body.appendChild(toast);
+  }
+  const name = filename || 'Mouse_Gestures.ahk';
+  toast.innerHTML = `
+    <b>✓ Script saved — ${name}</b>
+    <span>To apply changes: right-click the <b>H</b> tray icon → <b>Reload Script</b></span>
+  `;
+  toast.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => toast.classList.remove('show'), 6000);
+}
+
+/* ── IMPORT ── */
+function handleImport(inp) {
+  const r = new FileReader();
+  r.onload = () => {
+    const m = r.result.match(/; CONFIG_DATA: (.*)/);
+    if (m) {
+      ctxContainer.innerHTML = ""; selectedIdx = -1; showEmpty();
+      try {
+        const raw = JSON.parse(m[1]);
+        const contexts = Array.isArray(raw) ? raw : (raw.contexts || []);
+        macroLibrary = Array.isArray(raw) ? [] : (raw.macros || []);
+        if (!Array.isArray(raw) && raw.toggle) { toggleSettings = { ...toggleSettings, ...raw.toggle }; saveToggleSettings(); }
+        // Auto-disable safe mode if any binding uses left/right as a trigger
+        const hasLR = contexts.some(ctx => (ctx.rows || []).some(r => r.input === 'Left' || r.input === 'Right'));
+        if (hasLR && safeMode) { safeMode = false; saveToggleSettings(); }
+        saveMacros(); renderMacroList();
+        contexts.forEach(c => addContext(c.isGlobal, c, true));
+        renderSidebar();
+        if (ctxContainer.children.length > 0) selectContext(0);
+        save();
+      } catch (e) { alert("Failed to parse config data."); }
+    } else { alert("No CONFIG_DATA found in file."); }
+  };
+  r.readAsText(inp.files[0]);
+}
+
+/* ── MACRO LIBRARY ── */
+function saveMacros() {
+  localStorage.setItem('ahk_macros', JSON.stringify(macroLibrary));
+}
+
+function switchTab(tab) {
+  activeSidebarTab = tab;
+  document.getElementById('tab-contexts').classList.toggle('active', tab === 'contexts');
+  document.getElementById('tab-macros').classList.toggle('active', tab === 'macros');
+  document.getElementById('tab-settings').classList.toggle('active', tab === 'settings');
+  document.getElementById('ctx-list').style.display = tab === 'contexts' ? '' : 'none';
+  document.getElementById('macro-list').style.display = tab === 'macros' ? '' : 'none';
+  document.getElementById('ctx-add-btns').style.display = tab === 'contexts' ? '' : 'none';
+  document.getElementById('macro-add-btns').style.display = tab === 'macros' ? '' : 'none';
+  document.getElementById('settings-add-btns').style.display = tab === 'settings' ? '' : 'none';
+
+  const macroMount = document.getElementById('macro-editor-container');
+  const settingsMount = document.getElementById('settings-container');
+
+  // Always hide settings unless we're on that tab
+  settingsMount.style.display = 'none';
+
+  if (tab === 'contexts') {
+    macroMount.style.display = 'none';
+    selectedIdx >= 0 ? selectContext(selectedIdx) : showEmpty();
+  } else if (tab === 'settings') {
+    macroMount.style.display = 'none';
+    ctxContainer.style.display = 'none';
+    [...ctxContainer.children].forEach(c => c.classList.remove('active'));
+    mainEmpty.style.display = 'none';
+    settingsMount.style.display = 'flex';
+    renderSettingsPanel();
+  } else {
+    ctxContainer.style.display = 'none';
+    [...ctxContainer.children].forEach(c => c.classList.remove('active'));
+    if (selectedMacroId) {
+      mainEmpty.style.display = 'none';
+      macroMount.style.display = 'flex';
+      renderMacroEditor(selectedMacroId);
+    } else {
+      mainEmpty.style.display = 'flex';
+      mainEmpty.querySelector('h2').textContent = 'No macro selected';
+      mainEmpty.querySelector('p').textContent = 'Create a macro or select one from the sidebar.';
+    }
+  }
+}
+
+function renderMacroList() {
+  const list = document.getElementById('macro-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (macroLibrary.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:16px 14px;font-size:0.78rem;color:#444;';
+    empty.textContent = 'No macros yet.';
+    list.appendChild(empty); return;
+  }
+  macroLibrary.forEach(macro => {
+    const item = document.createElement('div');
+    item.className = 'ctx-item' + (macro.id === selectedMacroId ? ' active' : '');
+    item.onclick = () => { switchTab('macros'); openMacroEditor(macro.id); };
+
+    const icon = document.createElement('div'); icon.className = 'ctx-item-icon'; icon.textContent = '📋';
+    const body = document.createElement('div'); body.className = 'ctx-item-body';
+    const name = document.createElement('div'); name.className = 'ctx-item-name'; name.textContent = macro.name;
+    const sub = document.createElement('div'); sub.className = 'ctx-item-sub';
+    sub.textContent = `${macro.steps.length} step${macro.steps.length !== 1 ? 's' : ''}`;
+    body.append(name, sub);
+    const count = document.createElement('div'); count.className = 'ctx-item-count'; count.textContent = macro.steps.length;
+
+    const delBtn = document.createElement('button'); delBtn.className = 'ctx-menu-btn'; delBtn.textContent = '×'; delBtn.title = 'Delete';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteMacro(macro.id); };
+
+    item.append(icon, body, count, delBtn);
+    list.appendChild(item);
+  });
+}
+
+function newMacro() {
+  const id = 'macro_' + Date.now();
+  const n = macroLibrary.length + 1;
+  macroLibrary.push({ id, name: `New Macro ${n}`, steps: [] });
+  saveMacros(); renderMacroList();
+  openMacroEditor(id);
+}
+
+function openMacroEditor(id) {
+  selectedMacroId = id;
+  renderMacroList();
+  const macroMount = document.getElementById('macro-editor-container');
+  ctxContainer.style.display = 'none';
+  mainEmpty.style.display = 'none';
+  macroMount.style.display = 'flex';
+  renderMacroEditor(id);
+}
+
+function renderMacroEditor(id) {
+  const macro = macroLibrary.find(m => m.id === id);
+  const macroMount = document.getElementById('macro-editor-container');
+  if (!macro || !macroMount) return;
+  macroMount.innerHTML = '';
+
+  /* Header */
+  const header = document.createElement('div'); header.className = 'ctx-panel-header';
+  const lbl = document.createElement('span'); lbl.className = 'ctx-panel-header-label'; lbl.textContent = 'Macro';
+  const nameInput = document.createElement('input'); nameInput.className = 'macro-name-input';
+  nameInput.value = macro.name;
+  nameInput.onblur = () => {
+    const v = nameInput.value.trim();
+    if (v) { macro.name = v; saveMacros(); renderMacroList(); }
+    else nameInput.value = macro.name;
+  };
+  nameInput.onkeydown = (e) => { if (e.key === 'Enter') nameInput.blur(); };
+
+  const hActions = document.createElement('div'); hActions.className = 'ctx-panel-header-actions';
+
+  const recBtn = document.createElement('button');
+  recBtn.className = isRecording ? 'btn-record-stop btn-sm' : 'btn-record btn-sm';
+  recBtn.textContent = isRecording ? '⏹ Stop' : '⏺ Record';
+  recBtn.onclick = () => { isRecording ? stopRecording() : startRecording(id); };
+
+  const clearBtn = document.createElement('button'); clearBtn.className = 'btn-sm'; clearBtn.textContent = 'Clear';
+  clearBtn.onclick = () => { if (!macro.steps.length || confirm('Clear all steps?')) { macro.steps = []; saveMacros(); renderMacroEditor(id); } };
+
+  const delBtn = document.createElement('button'); delBtn.className = 'btn-danger btn-sm'; delBtn.textContent = 'Delete';
+  delBtn.onclick = () => deleteMacro(id);
+
+  hActions.append(recBtn, clearBtn, delBtn);
+  header.append(lbl, nameInput, hActions);
+
+  /* Body */
+  const body = document.createElement('div'); body.className = 'ctx-panel-body';
+
+  if (isRecording) {
+    const bar = document.createElement('div'); bar.className = 'recording-bar';
+    const dot = document.createElement('span'); dot.className = 'rec-dot';
+    bar.append(dot, document.createTextNode(' Recording — press keys. Click Stop when done.'));
+    body.appendChild(bar);
+  }
+
+  const stepsEl = document.createElement('div');
+  recordStepsEl = stepsEl;
+
+  if (!macro.steps.length && !isRecording) {
+    const empty = document.createElement('div'); empty.className = 'macro-steps-empty';
+    empty.innerHTML = 'No steps yet.<br>Click <b>⏺ Record</b> to capture keystrokes, or <b>+ Add Step</b> to build manually.';
+    stepsEl.appendChild(empty);
+  } else {
+    macro.steps.forEach((step, i) => stepsEl.appendChild(makeMacroStep(step, i, macro)));
+  }
+  body.appendChild(stepsEl);
+
+  /* Footer */
+  const footer = document.createElement('div'); footer.className = 'add-binding-bar';
+  const addBtn = document.createElement('button'); addBtn.className = 'btn-ghost'; addBtn.textContent = '+ Add Step';
+  addBtn.onclick = () => {
+    macro.steps.push({ key: '', delay: 50 });
+    saveMacros();
+    const empty = stepsEl.querySelector('.macro-steps-empty');
+    if (empty) empty.remove();
+    stepsEl.appendChild(makeMacroStep(macro.steps[macro.steps.length - 1], macro.steps.length - 1, macro));
+  };
+  footer.appendChild(addBtn);
+
+  macroMount.append(header, body, footer);
+}
+
+function makeMacroStep(step, idx, macro) {
+  const row = document.createElement('div'); row.className = 'macro-step';
+
+  const num = document.createElement('span'); num.className = 'macro-step-num'; num.textContent = idx + 1;
+
+  const typeSel = document.createElement('select'); typeSel.className = 'macro-step-type';
+  [['press','Press ●'], ['down','Hold ↓'], ['up','Release ↑']].forEach(([v, l]) => {
+    const op = new Option(l, v);
+    if ((step.type || 'press') === v) op.selected = true;
+    typeSel.add(op);
+  });
+  typeSel.onchange = () => { step.type = typeSel.value; saveMacros(); };
+
+  const rec = createRecorder(step.key);
+  rec.input.oninput = () => { step.key = rec.input.value; saveMacros(); };
+
+  const waitLbl = document.createElement('span'); waitLbl.className = 'macro-step-lbl'; waitLbl.textContent = 'wait';
+  const delayIn = document.createElement('input'); delayIn.type = 'number'; delayIn.style.width = '60px';
+  delayIn.value = step.delay; delayIn.min = '0';
+  delayIn.oninput = () => { step.delay = Math.max(0, parseInt(delayIn.value) || 0); saveMacros(); };
+  const msLbl = document.createElement('span'); msLbl.className = 'macro-step-lbl'; msLbl.textContent = 'ms';
+
+  const upBtn = document.createElement('button'); upBtn.className = 'btn-icon'; upBtn.textContent = '↑'; upBtn.disabled = idx === 0;
+  upBtn.onclick = () => { if (idx === 0) return; [macro.steps[idx], macro.steps[idx-1]] = [macro.steps[idx-1], macro.steps[idx]]; saveMacros(); renderMacroEditor(macro.id); };
+
+  const dnBtn = document.createElement('button'); dnBtn.className = 'btn-icon'; dnBtn.textContent = '↓'; dnBtn.disabled = idx === macro.steps.length - 1;
+  dnBtn.onclick = () => { if (idx >= macro.steps.length-1) return; [macro.steps[idx], macro.steps[idx+1]] = [macro.steps[idx+1], macro.steps[idx]]; saveMacros(); renderMacroEditor(macro.id); };
+
+  const rmBtn = document.createElement('button'); rmBtn.className = 'btn-danger btn-icon'; rmBtn.textContent = '×';
+  rmBtn.onclick = () => { macro.steps.splice(idx, 1); saveMacros(); renderMacroEditor(macro.id); };
+
+  row.append(num, typeSel, rec.wrap, waitLbl, delayIn, msLbl, upBtn, dnBtn, rmBtn);
+  return row;
+}
+
+function startRecording(id) {
+  const macro = macroLibrary.find(m => m.id === id);
+  if (!macro) return;
+  macro.steps = [];
+  saveMacros();
+  isRecording = true;
+  recordLastTime = 0;
+  selectedMacroId = id;
+  renderMacroEditor(id);
+  window.addEventListener('keydown', _recordHandler, true);
+  window.addEventListener('keyup', _recordUpHandler, true);
+}
+
+const RECORD_MODIFIERS = ['Control','Alt','Shift','Meta','OS'];
+
+function _recordHandler(e) {
+  e.preventDefault(); e.stopPropagation();
+  const now = performance.now();
+  const delay = recordLastTime ? Math.max(0, Math.round(now - recordLastTime)) : 0;
+  recordLastTime = now;
+  const key = CONFIG.keyMap[e.key] || e.key;
+  const type = RECORD_MODIFIERS.includes(e.key) ? 'down' : 'press';
+  const macro = macroLibrary.find(m => m.id === selectedMacroId);
+  if (!macro) return;
+  const step = { key, delay, type };
+  macro.steps.push(step);
+  saveMacros();
+  if (recordStepsEl) {
+    const empty = recordStepsEl.querySelector('.macro-steps-empty');
+    if (empty) empty.remove();
+    recordStepsEl.appendChild(makeMacroStep(step, macro.steps.length - 1, macro));
+  }
+  renderMacroList();
+}
+
+function _recordUpHandler(e) {
+  if (!RECORD_MODIFIERS.includes(e.key)) return;
+  e.preventDefault(); e.stopPropagation();
+  const now = performance.now();
+  const delay = recordLastTime ? Math.max(0, Math.round(now - recordLastTime)) : 0;
+  recordLastTime = now;
+  const key = CONFIG.keyMap[e.key] || e.key;
+  const macro = macroLibrary.find(m => m.id === selectedMacroId);
+  if (!macro) return;
+  const step = { key, delay, type: 'up' };
+  macro.steps.push(step);
+  saveMacros();
+  if (recordStepsEl) {
+    recordStepsEl.appendChild(makeMacroStep(step, macro.steps.length - 1, macro));
+  }
+  renderMacroList();
+}
+
+function stopRecording() {
+  isRecording = false;
+  recordLastTime = 0;
+  window.removeEventListener('keydown', _recordHandler, true);
+  window.removeEventListener('keyup', _recordUpHandler, true);
+  if (selectedMacroId) renderMacroEditor(selectedMacroId);
+}
+
+function deleteMacro(id) {
+  if (!confirm('Delete this macro? Bindings using it will fall back to "no action".')) return;
+  if (isRecording && selectedMacroId === id) stopRecording();
+  macroLibrary = macroLibrary.filter(m => m.id !== id);
+  saveMacros();
+  if (selectedMacroId === id) {
+    selectedMacroId = null;
+    document.getElementById('macro-editor-container').style.display = 'none';
+    mainEmpty.style.display = 'flex';
+    mainEmpty.querySelector('h2').textContent = 'No macro selected';
+    mainEmpty.querySelector('p').textContent = 'Create a macro or select one from the sidebar.';
+  }
+  renderMacroList();
+}
+
+/* ── TOGGLE SETTINGS ── */
+function saveToggleSettings() {
+  localStorage.setItem('ahk_toggle', JSON.stringify(toggleSettings));
+  localStorage.setItem('ahk_conflicts', JSON.stringify(conflictsEnabled));
+  localStorage.setItem('ahk_safemode', JSON.stringify(safeMode));
+}
+
+function loadToggleSettings() {
+  const s = localStorage.getItem('ahk_toggle');
+  if (s) { try { toggleSettings = { ...toggleSettings, ...JSON.parse(s) }; } catch(e) {} }
+  const c = localStorage.getItem('ahk_conflicts');
+  if (c !== null) { try { conflictsEnabled = JSON.parse(c); } catch(e) {} }
+  const sm = localStorage.getItem('ahk_safemode');
+  if (sm !== null) { try { safeMode = JSON.parse(sm); } catch(e) {} }
+}
+
+function renderSettingsPanel() {
+  const container = document.getElementById('settings-container');
+  container.innerHTML = '';
+
+  /* Header */
+  const header = document.createElement('div'); header.className = 'ctx-panel-header';
+  const lbl = document.createElement('span'); lbl.className = 'ctx-panel-header-label'; lbl.textContent = 'Settings';
+  header.appendChild(lbl);
+
+  /* Body */
+  const body = document.createElement('div'); body.className = 'settings-body';
+
+  /* ── Toggle card ── */
+  const card = document.createElement('div'); card.className = 'settings-card';
+
+  // Enabled toggle switch row
+  const titleRow = document.createElement('label'); titleRow.className = 'toggle-enabled-row';
+  const sw = document.createElement('label'); sw.className = 'toggle-switch';
+  const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = toggleSettings.enabled;
+  const slider = document.createElement('span'); slider.className = 'toggle-slider';
+  sw.append(chk, slider);
+  const titleTxt = document.createElement('div');
+  titleTxt.innerHTML = '<div class="settings-card-title">Script Toggle Hotkey</div>';
+  titleRow.append(sw, titleTxt);
+  card.appendChild(titleRow);
+
+  const descEl = document.createElement('div'); descEl.className = 'settings-card-desc';
+  descEl.textContent = 'Bind a hotkey to suspend/resume the script on the fly. A tooltip popup will confirm each state change.';
+  card.appendChild(descEl);
+
+  /* Config (shown when enabled) */
+  const cfg = document.createElement('div');
+  cfg.style.display = toggleSettings.enabled ? 'block' : 'none';
+
+  // ── Trigger type pill selector ──
+  const typeGroup = document.createElement('div'); typeGroup.className = 'trigger-type-group';
+  const mkTypeBtn = (label, val) => {
+    const b = document.createElement('button'); b.className = 'trigger-type-btn' + (toggleSettings.type === val ? ' active' : '');
+    b.textContent = label;
+    b.onclick = () => {
+      toggleSettings.type = val; saveToggleSettings();
+      typeGroup.querySelectorAll('.trigger-type-btn').forEach(x => x.classList.toggle('active', x === b));
+      refreshCfgBody();
+    };
+    return b;
+  };
+  typeGroup.append(mkTypeBtn('⌨ Keyboard Key', 'key'), mkTypeBtn('🖱 Mouse Button', 'mouse'));
+  cfg.appendChild(typeGroup);
+
+  // ── Dynamic sub-UI (keyboard vs mouse) ──
+  const cfgBody = document.createElement('div');
+  cfg.appendChild(cfgBody);
+
+  const hint = document.createElement('div'); hint.className = 'settings-hint';
+  cfg.appendChild(hint);
+
+  const refreshCfgBody = () => {
+    cfgBody.innerHTML = '';
+
+    if (toggleSettings.type === 'key') {
+      // Key recorder row
+      const row = document.createElement('div'); row.className = 'settings-row';
+      const rowLbl = document.createElement('span'); rowLbl.className = 'settings-row-lbl'; rowLbl.textContent = 'Trigger key';
+
+      const keyDisplay = document.createElement('div'); keyDisplay.className = 'settings-key-display';
+      keyDisplay.textContent = toggleSettings.key || 'click to record…';
+
+      const recBtn = document.createElement('button'); recBtn.className = 'btn-sm'; recBtn.textContent = '⏺ Record';
+      recBtn.onclick = () => {
+        keyDisplay.textContent = 'press a key or shortcut…';
+        keyDisplay.classList.add('recording');
+        recBtn.disabled = true;
+        const handler = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          if (['Control','Alt','Shift','Meta','OS'].includes(e.key)) return;
+          const mods = [];
+          if (e.ctrlKey)  mods.push('Ctrl');
+          if (e.altKey)   mods.push('Alt');
+          if (e.shiftKey) mods.push('Shift');
+          if (e.metaKey)  mods.push('Win');
+          const baseKey = CONFIG.keyMap[e.key] || e.key;
+          const k = [...mods, baseKey].join('+');
+          toggleSettings.key = k;
+          keyDisplay.textContent = k;
+          keyDisplay.classList.remove('recording');
+          recBtn.disabled = false;
+          window.removeEventListener('keydown', handler, true);
+          saveToggleSettings();
+          refreshCfgBody();
+        };
+        window.addEventListener('keydown', handler, true);
+      };
+
+      row.append(rowLbl, keyDisplay, recBtn);
+      cfgBody.appendChild(row);
+
+      const dispKey = toggleSettings.key || '?';
+      hint.innerHTML = `<b>💡 How it works:</b> Press <b>${dispKey}</b> to toggle the script on/off.`;
+    } else {
+      // Mouse button + count rows
+      const btnRow = document.createElement('div'); btnRow.className = 'settings-row';
+      const btnLbl = document.createElement('span'); btnLbl.className = 'settings-row-lbl'; btnLbl.textContent = 'Trigger button';
+      const btnSel = document.createElement('select');
+      [['Middle','Middle Button'],['Back','Back Button (XButton1)'],['Forward','Forward Button (XButton2)']].forEach(([v,l]) => {
+        const op = new Option(l, v); if (v === toggleSettings.button) op.selected = true; btnSel.add(op);
+      });
+      btnRow.append(btnLbl, btnSel);
+
+      // Click count row
+      const cntRow = document.createElement('div'); cntRow.className = 'settings-row';
+      const cntLbl = document.createElement('span'); cntLbl.className = 'settings-row-lbl'; cntLbl.textContent = 'Click count';
+      const cntIn = document.createElement('input');
+      cntIn.type = 'number'; cntIn.min = 2; cntIn.max = 10; cntIn.style.width = '56px';
+      cntIn.value = toggleSettings.count || 5;
+      cntRow.append(cntLbl, cntIn);
+
+      const onMCfgChange = () => {
+        toggleSettings.button = btnSel.value;
+        toggleSettings.count = Math.max(2, Math.min(10, parseInt(cntIn.value) || 5));
+        cntIn.value = toggleSettings.count;
+        saveToggleSettings();
+        const btn = btnSel.options[btnSel.selectedIndex].text;
+        hint.innerHTML = `<b>💡 How it works:</b> Rapidly click <b>${btn}</b> <b>${toggleSettings.count}</b> times to toggle the script on/off.`;
+      };
+      cntIn.oninput = onMCfgChange;
+      btnSel.onchange = onMCfgChange;
+
+      cfgBody.append(btnRow, cntRow);
+      onMCfgChange(); // populate hint
+    }
+  };
+
+  chk.onchange = () => {
+    toggleSettings.enabled = chk.checked;
+    cfg.style.display = chk.checked ? 'block' : 'none';
+    saveToggleSettings();
+  };
+
+  refreshCfgBody();
+
+  card.appendChild(cfg);
+  body.appendChild(card);
+
+  /* ── Show warnings card ── */
+  const conflictCard = document.createElement('div'); conflictCard.className = 'settings-card';
+  const conflictRow = document.createElement('label'); conflictRow.className = 'toggle-enabled-row';
+  const conflictSw = document.createElement('label'); conflictSw.className = 'toggle-switch';
+  const conflictChk = document.createElement('input'); conflictChk.type = 'checkbox'; conflictChk.checked = conflictsEnabled;
+  const conflictSlider = document.createElement('span'); conflictSlider.className = 'toggle-slider';
+  conflictSw.append(conflictChk, conflictSlider);
+  const conflictTxt = document.createElement('div');
+  conflictTxt.innerHTML = '<div class="settings-card-title">Show Warnings</div>';
+  conflictRow.append(conflictSw, conflictTxt);
+  const conflictDesc = document.createElement('div'); conflictDesc.className = 'settings-card-desc';
+  conflictDesc.textContent = 'Show inline warnings for duplicate triggers and risky bindings. Major warnings (shown at export time) always appear regardless of this setting.';
+  conflictChk.onchange = () => {
+    conflictsEnabled = conflictChk.checked;
+    document.body.classList.toggle('warnings-hidden', !conflictsEnabled);
+    saveToggleSettings();
+    checkConflicts(save());
+  };
+  conflictCard.append(conflictRow, conflictDesc);
+  body.appendChild(conflictCard);
+
+  /* ── Safe mode card ── */
+  const safeModeCard = document.createElement('div'); safeModeCard.className = 'settings-card';
+  const safeModeRow = document.createElement('label'); safeModeRow.className = 'toggle-enabled-row';
+  const safeModeSw = document.createElement('label'); safeModeSw.className = 'toggle-switch';
+  const safeModeChk = document.createElement('input'); safeModeChk.type = 'checkbox'; safeModeChk.checked = safeMode;
+  const safeModeSlider = document.createElement('span'); safeModeSlider.className = 'toggle-slider';
+  safeModeSw.append(safeModeChk, safeModeSlider);
+  const safeModeTxt = document.createElement('div');
+  safeModeTxt.innerHTML = '<div class="settings-card-title">Safe Mode</div>';
+  safeModeRow.append(safeModeSw, safeModeTxt);
+  const safeModeDesc = document.createElement('div'); safeModeDesc.className = 'settings-card-desc';
+  safeModeDesc.textContent = 'Hides left and right click as trigger options. Recommended — binding them without a modifier will block normal clicking.';
+  safeModeChk.onchange = () => {
+    safeMode = safeModeChk.checked;
+    saveToggleSettings();
+    _refreshTriggerSelects();
+  };
+  safeModeCard.append(safeModeRow, safeModeDesc);
+  body.appendChild(safeModeCard);
+
+  container.append(header, body);
+}
+
+function _refreshTriggerSelects() {
+  const inputs = safeMode ? CONFIG.inputs.filter(i => i !== 'Left' && i !== 'Right') : CONFIG.inputs;
+  document.querySelectorAll('tr.binding-row td:first-child select').forEach(sel => {
+    const cur = sel.value;
+    while (sel.options.length) sel.remove(0);
+    inputs.forEach(o => { const op = new Option(o, o, false, o === cur); sel.add(op); });
+    if (!inputs.includes(cur)) sel.selectedIndex = 0;
+    sel.dispatchEvent(new Event('change'));
+  });
+}
+
+/* ── HELPERS ── */
+function renderTag(n, b) {
+  const s = document.createElement('div'); s.className = 'tag';
+  s.innerHTML = `<span>${n}</span>`;
+  const d = document.createElement('b'); d.innerHTML = '&times;';
+  d.onclick = () => { s.remove(); save(); };
+  s.append(d); b.append(s); save();
+}
+
+function createSelect(opts, sel) {
+  const s = document.createElement('select');
+  opts.forEach(o => { const op = document.createElement('option'); op.value = op.text = o; if (o === sel) op.selected = true; s.add(op); });
+  return s;
+}
+
+function td(e) { const c = document.createElement('td'); c.append(e); return c; }
+
+/* ── INIT ── */
+window.onload = () => {
+  loadToggleSettings();
+  document.body.classList.toggle('warnings-hidden', !conflictsEnabled);
+  const ms = localStorage.getItem('ahk_macros');
+  if (ms) { try { macroLibrary = JSON.parse(ms); } catch(e) {} }
+  renderMacroList();
+  const s = localStorage.getItem('ahk_mouse_cfg') || localStorage.getItem('ahk_mouse_v5_8');
+  if (s) {
+    const contexts = JSON.parse(s);
+    // Auto-disable safe mode if saved bindings use left/right as a trigger
+    const hasLR = contexts.some(ctx => (ctx.rows || []).some(r => r.input === 'Left' || r.input === 'Right'));
+    if (hasLR && safeMode) { safeMode = false; saveToggleSettings(); }
+    contexts.forEach(c => addContext(c.isGlobal, c, true));
+    renderSidebar();
+    if (ctxContainer.children.length > 0) selectContext(0);
+  }
+};
+  /* ── GUIDES ── */
+  function openGuides() { document.getElementById('guides-modal').style.display = 'flex'; }
+  function closeGuides() { document.getElementById('guides-modal').style.display = 'none'; }
+
+</script>
+
+<div id="guides-modal" class="guides-overlay" style="display:none" onclick="if(event.target===this)closeGuides()">
+  <div class="guides-modal">
+    <div class="guides-modal-hdr">
+      <h2>Guide &amp; FAQ</h2>
+      <button class="btn-icon" onclick="closeGuides()">×</button>
+    </div>
+    <div class="guides-modal-body">
+
+      <div class="guides-section guides-steps">
+        <div class="guides-section-title">How to use your script</div>
+        <ol>
+          <li>Download and install <a href="https://www.autohotkey.com" target="_blank">AutoHotkey v2</a> from autohotkey.com</li>
+          <li>Click <strong>Export .ahk</strong> in Mouse AHK to save your script file</li>
+          <li>Double-click the <code>.ahk</code> file to run it</li>
+          <li>A green <strong>H</strong> icon appears in the system tray, the script is running</li>
+          <li>To stop it: right-click the tray icon → <strong>Exit</strong></li>
+        </ol>
+      </div>
+
+      <div class="guides-section">
+        <div class="guides-section-title">FAQ</div>
+        <div class="guides-faq" id="guides-faq"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function buildFaq() {
+  const items = [
+    {
+      q: "How do I make it run on startup?",
+      a: `<ol>
+        <li>Right-click the <code>.ahk</code> file → <strong>Copy as Path</strong></li>
+        <li>Press <code>Win+R</code>, type <code>shell:startup</code>, press Enter</li>
+        <li>In the startup folder, right-click → <strong>New → Shortcut</strong></li>
+        <li>Paste the path → click <strong>Next</strong> → <strong>Finish</strong></li>
+      </ol>`
+    },
+    {
+      q: "How do I edit my bindings later?",
+      a: `Come back to Mouse AHK, make your changes, then click <strong>Export .ahk</strong> and overwrite the old file. If the script was running, right-click the tray icon → <strong>Reload</strong>.`
+    },
+    {
+      q: "It stopped working after I re-exported",
+      a: `The script doesn't watch the file for changes. After overwriting it, either right-click the tray icon → <strong>Reload</strong>, or double-click the <code>.ahk</code> file again.`
+    },
+    {
+      q: "Two copies seem to be running",
+      a: `The script includes <code>#SingleInstance Force</code>, so double-clicking it again automatically replaces the running copy — you won't end up with two. If you do see duplicate tray icons, exit both and double-click once.`
+    }
+  ];
+  const container = document.getElementById('guides-faq');
+  items.forEach(({ q, a }) => {
+    const item = document.createElement('div'); item.className = 'guides-faq-item';
+    const qEl = document.createElement('div'); qEl.className = 'guides-faq-q';
+    qEl.innerHTML = `<span>${q}</span><span class="faq-chev">›</span>`;
+    const aEl = document.createElement('div'); aEl.className = 'guides-faq-a';
+    aEl.innerHTML = a;
+    qEl.onclick = () => item.classList.toggle('open');
+    item.append(qEl, aEl);
+    container.appendChild(item);
+  });
+})();
+</script>
+</body>
+</html>

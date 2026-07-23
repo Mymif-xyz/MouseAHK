@@ -5,8 +5,8 @@ Mouse AHK is a browser-based tool for generating AutoHotKey scripts with custom 
  - App Profiles – Create separate setups for different applications
  - Macro Builder – An easy, visual way to build macros without writing code
  - Import/Export – Move your setup between devices or back it up easily
- - Broad Device Support – Despite the name, you can assign shortcuts to anything AHK recognizes — keyboards, mice, and game controllers (some controllers not supported). See the full AutoHotkey Key List for accepted keys.
-
+ - Broad Device Support – Despite the name keyboards, mice, and game controllers (although, you'll need to enter them manually from the [AutoHotkey Key List](https://www.autohotkey.com/docs/v1/KeyList.htm)).
+ 
 # Getting Started
 1. Visit https://mymif-xyz.github.io/MouseAHK/
 2. Follow the on-screen tutorial

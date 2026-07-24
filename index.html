@@ -1022,26 +1022,69 @@ let safeMode = true;
 let _ahkFileHandle = null;
 let _dragRow = null;
 
+/* ── GAMEPAD POLLING ──
+   Browsers don't fire keyboard events for controller buttons, so we poll
+   navigator.getGamepads() on animation frames while "recording" is active,
+   and resolve with the first NEWLY-pressed button (ignoring anything already
+   held down when polling started). */
+function pollForGamepadButton(onDetect) {
+  if (!navigator.getGamepads) return () => {};
+  let rafId;
+  const snapshot = () => {
+    const held = new Set();
+    for (const pad of navigator.getGamepads()) {
+      if (!pad) continue;
+      pad.buttons.forEach((b, i) => { if (b.pressed) held.add(pad.index + ':' + i); });
+    }
+    return held;
+  };
+  const baseline = snapshot();
+  const poll = () => {
+    for (const pad of navigator.getGamepads()) {
+      if (!pad) continue;
+      for (let i = 0; i < pad.buttons.length; i++) {
+        const key = pad.index + ':' + i;
+        if (pad.buttons[i].pressed && !baseline.has(key)) {
+          onDetect(i, pad);
+          return;
+        }
+      }
+    }
+    rafId = requestAnimationFrame(poll);
+  };
+  rafId = requestAnimationFrame(poll);
+  return () => cancelAnimationFrame(rafId);
+}
+
 /* ── KEY RECORDER ── */
 function createRecorder(val = "") {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:inline-flex;gap:4px;align-items:center;';
   const i = document.createElement('input');
   i.className = 'rec-input'; i.value = val; i.oninput = save;
-  i.title = "Psst! You can type anything from the AHK keylist here (even controller inputs)";
+  i.title = "Psst! You can type anything from the AHK keylist here (even controller inputs like Joy1)";
   const btnRec = document.createElement('button');
-  btnRec.className = 'btn-icon'; btnRec.title = 'Click then press a key';
+  btnRec.className = 'btn-icon'; btnRec.title = 'Click, then press a key or a controller button';
   btnRec.textContent = "⏺";
   btnRec.onclick = () => {
     i.value = "…"; btnRec.style.color = '#e07070';
+    let stopPoll = null;
+    const cleanup = () => {
+      btnRec.style.color = '';
+      window.removeEventListener('keydown', handler);
+      if (stopPoll) stopPoll();
+      save();
+    };
     const handler = (e) => {
       e.preventDefault();
       i.value = CONFIG.keyMap[e.key] || e.key;
-      btnRec.style.color = '';
-      window.removeEventListener('keydown', handler);
-      save();
+      cleanup();
     };
     window.addEventListener('keydown', handler);
+    stopPoll = pollForGamepadButton((btnIndex) => {
+      i.value = `Joy${btnIndex + 1}`;
+      cleanup();
+    });
   };
   wrap.append(i, btnRec);
   return { wrap, input: i };
@@ -1069,21 +1112,35 @@ function createModifierUI(savedMods = []) {
   const addBtn = document.createElement('button');
   addBtn.className = 'mod-pill mod-pill-add';
   addBtn.textContent = '+ Custom';
+  addBtn.title = 'Press a key or a controller button';
   addBtn.onclick = () => {
     addBtn.textContent = 'press key…';
     addBtn.classList.add('recording');
-    const handler = (e) => {
-      e.preventDefault(); e.stopPropagation();
-      const key = CONFIG.keyMap[e.key] || e.key;
+    let stopPoll = null;
+    const cleanup = () => {
       addBtn.textContent = '+ Custom';
       addBtn.classList.remove('recording');
       window.removeEventListener('keydown', handler, true);
+      if (stopPoll) stopPoll();
+    };
+    const handler = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const key = CONFIG.keyMap[e.key] || e.key;
+      cleanup();
       if (key && key !== 'Unidentified' && !CONFIG.modifiers.includes(key)) {
         wrap.insertBefore(makeCustomPill(key, wrap), addBtn);
         save();
       }
     };
     window.addEventListener('keydown', handler, true);
+    stopPoll = pollForGamepadButton((btnIndex) => {
+      const key = `Joy${btnIndex + 1}`;
+      cleanup();
+      if (!CONFIG.modifiers.includes(key)) {
+        wrap.insertBefore(makeCustomPill(key, wrap), addBtn);
+        save();
+      }
+    });
   };
   wrap.appendChild(addBtn);
 
